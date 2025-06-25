@@ -3,7 +3,6 @@ package com.api.agenda_odontologica.service;
 import com.api.agenda_odontologica.dto.PatientDTO;
 import com.api.agenda_odontologica.entity.Patient;
 import com.api.agenda_odontologica.repository.PatientRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,8 +12,12 @@ import java.util.stream.Collectors;
 @Service
 public class PatientService {
 
-    @Autowired
-    private PatientRepository patientRepository;
+    private final PatientRepository patientRepository;
+
+  
+    public PatientService(PatientRepository patientRepository) {
+        this.patientRepository = patientRepository;
+    }
 
     public List<PatientDTO> getAllPatients() {
         return patientRepository.findAll().stream()

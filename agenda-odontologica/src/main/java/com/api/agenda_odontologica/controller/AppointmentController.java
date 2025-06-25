@@ -43,7 +43,7 @@ public class AppointmentController {
             List<AppointmentDTO> appointments = appointmentService.getAvailableAppointments();
             return new ResponseEntity<>(appointments, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(List.of(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

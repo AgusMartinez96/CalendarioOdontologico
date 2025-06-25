@@ -11,6 +11,10 @@
     <a href="#" th:href="@{/logout}" style="float: right;">Cerrar sesión</a>
 </header>
 
+<!-- Mensajes de feedback -->
+<div th:if="${success}" class="alert success" th:text="${success}"></div>
+<div th:if="${error}" class="alert error" th:text="${error}"></div>
+
 <!-- Sección de Pacientes -->
 <section>
     <h2>Pacientes</h2>
@@ -35,6 +39,7 @@
             <td>
                 <a th:href="@{'/appointments/new?patientId=' + ${patient.id}}">Asignar Turno</a>
                 <a th:href="@{'/patients/edit/' + ${patient.id}}">Editar</a>
+                <a th:href="@{'/patients/delete/' + ${patient.id}}" onclick="return confirm('¿Seguro que deseas eliminar este paciente?')">Eliminar</a>
             </td>
         </tr>
         </tbody>
@@ -66,5 +71,17 @@
         </tbody>
     </table>
 </section>
+
+<!-- Ejemplo para paciente -->
+<form th:action="@{/patients/save}" th:object="${patient}" method="post">
+    <!-- campos del formulario -->
+</form>
+
+<!-- Ejemplo para turno -->
+<form th:action="@{/appointments/save}" th:object="${appointment}" method="post">
+    <!-- campos del formulario -->
+</form>
+<a th:href="@{/home}">Volver al Panel</a>
 </body>
 </html>
+
