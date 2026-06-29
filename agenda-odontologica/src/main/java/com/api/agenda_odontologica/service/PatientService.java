@@ -37,7 +37,6 @@ public class PatientService {
         patient.setApellido(patientDTO.getApellido());
         patient.setDni(patientDTO.getDni());
         patient.setObraSocial(patientDTO.getObraSocial());
-
         patient = patientRepository.save(patient);
         return new PatientDTO(patient);
     }

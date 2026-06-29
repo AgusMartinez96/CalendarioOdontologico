@@ -17,24 +17,34 @@ public class PatientController {
     @Autowired
     private PatientService patientService;
 
+    // Vista HTML con la lista de pacientes
+    @GetMapping("/list")
+    public String listPatients(Model model) {
+        model.addAttribute("patients", patientService.getAllPatients());
+        return "patients"; // plantilla con la tabla
+    }
+
+    // API REST: obtener todos los pacientes en JSON
     @GetMapping
+    @ResponseBody
     public List<PatientDTO> getAllPatients() {
         return patientService.getAllPatients();
     }
 
+    // API REST: obtener paciente por ID en JSON
     @GetMapping("/{id}")
     public PatientDTO getPatientById(@PathVariable Long id) {
         return patientService.getPatientById(id);
     }
 
-    // Mostrar formulario para agregar paciente
-    @GetMapping("/add")
-    public String showAddPatientForm(Model model) {
-        model.addAttribute("patient", new PatientDTO());
-        return "add_patient"; // Muestra la plantilla add_patient.html
+    // Formulario HTML para nuevo paciente
+    @GetMapping("/new")
+public String newPatientForm(Model model) {
+    model.addAttribute("patient", new PatientDTO());
+    return "add_patient";
     }
 
-    //Busqueda avanzada por nombre, dni u obra social
+    //Busqueda avanzada (JSON) por nombre, dni u obra social
     @GetMapping("/search")
     public List<PatientDTO> searchPatients(
             @RequestParam(required = false) String nombre,
@@ -43,7 +53,7 @@ public class PatientController {
         return patientService.searchPatients(nombre, dni, obraSocial);
     }
 
-    // Guardar paciente en la base de datos
+    // Guardar paciente en la base de datos desde formulario HTML
     @PostMapping("/save")
     public String savePatient(@ModelAttribute PatientDTO patient, RedirectAttributes redirectAttributes) {
     try {
@@ -52,19 +62,21 @@ public class PatientController {
     } catch (Exception e) {
         redirectAttributes.addFlashAttribute("error", "Error al guardar el paciente.");
     }
-    return "redirect:/home";
+    return "redirect:/patients/list";
 }
-
+     // API REST: crear paciente en JSON
     @PostMapping
     public PatientDTO createPatient(@RequestBody PatientDTO patientDTO) {
         return patientService.savePatient(patientDTO);
     }
 
+    // API REST: actualizar paciente en JSON
     @PutMapping("/{id}")
     public PatientDTO updatePatient(@PathVariable Long id, @RequestBody PatientDTO patientDTO) {
         return patientService.updatePatient(id, patientDTO);
     }
 
+    // API REST: eliminar paciente
     @DeleteMapping("/{id}")
     public void deletePatient(@PathVariable Long id) {
         patientService.deletePatient(id);
