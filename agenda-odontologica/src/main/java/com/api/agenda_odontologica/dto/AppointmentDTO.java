@@ -13,7 +13,6 @@ public class AppointmentDTO {
     private Long patientId;
     private LocalDateTime fecha;
     private Boolean asistencia;
-    private PostAppointmentDTO postAppointment;
 
     public AppointmentDTO() {}
 
@@ -23,6 +22,5 @@ public class AppointmentDTO {
         this.patientId = appointment.getPatient() != null ? appointment.getPatient().getId() : null;
         this.fecha = appointment.getFecha();
         this.asistencia = appointment.getAsistencia();
-        this.postAppointment = appointment.getPostAppointment() != null ? new PostAppointmentDTO(appointment.getPostAppointment()) : null;
     }
 }

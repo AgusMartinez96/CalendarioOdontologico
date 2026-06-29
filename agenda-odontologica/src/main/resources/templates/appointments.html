@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Lista de Turnos</title>
+</head>
+<body>
+    <h1>Turnos</h1>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Paciente</th>
+            <th>Asistencia</th>
+        </tr>
+        <tr th:each="appointment : ${appointments}">
+            <td th:text="${appointment.id}"></td>
+            <td th:text="${#temporals.format(appointment.fecha, 'yyyy-MM-dd')}"></td>
+            <td th:text="${#temporals.format(appointment.fecha, 'HH:mm')}"></td>
+            <td th:text="${appointment.patientId}"></td>
+            <td th:text="${appointment.asistencia}"></td>
+        </tr>
+    </table>
+
+    <a th:href="@{/patients/list}">Volver a Pacientes</a>
+</body>
+</html>

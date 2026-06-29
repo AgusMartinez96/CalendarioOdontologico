@@ -2,10 +2,8 @@ package com.api.agenda_odontologica.service;
 
 import com.api.agenda_odontologica.dto.AppointmentDTO;
 import com.api.agenda_odontologica.dto.PatientDTO;
-import com.api.agenda_odontologica.dto.PostAppointmentDTO;
 import com.api.agenda_odontologica.entity.Appointment;
 import com.api.agenda_odontologica.entity.Patient;
-import com.api.agenda_odontologica.entity.PostAppointment;
 import com.api.agenda_odontologica.repository.AppointmentRepository;
 import com.api.agenda_odontologica.repository.PatientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,17 +47,6 @@ public class AppointmentService {
             appointment.setPatient(patient);
         }
 
-        if (appointmentDTO.getPostAppointment() != null) {
-            PostAppointmentDTO postAppointmentDTO = appointmentDTO.getPostAppointment();
-            PostAppointment postAppointment = new PostAppointment();
-            postAppointment.setId(postAppointmentDTO.getId());
-            postAppointment.setProtesis(postAppointmentDTO.getProtesis());
-            postAppointment.setFecha(postAppointmentDTO.getFecha());
-            postAppointment.setMateriales(postAppointmentDTO.getMateriales());
-            postAppointment.setAppointment(appointment);
-            appointment.setPostAppointment(postAppointment);
-        }
-
         appointment = appointmentRepository.save(appointment);
         return new AppointmentDTO(appointment);
     }
@@ -82,19 +69,6 @@ public class AppointmentService {
                 if (appointmentDTO.getPatientId() != null) {
                     Patient patient = patientRepository.findById(appointmentDTO.getPatientId()).orElse(null);
                     appointment.setPatient(patient);
-                }
-
-                if (appointmentDTO.getPostAppointment() != null) {
-                    PostAppointmentDTO postAppointmentDTO = appointmentDTO.getPostAppointment();
-                    PostAppointment postAppointment = new PostAppointment();
-                    postAppointment.setId(postAppointmentDTO.getId());
-                    postAppointment.setProtesis(postAppointmentDTO.getProtesis());
-                    postAppointment.setFecha(postAppointmentDTO.getFecha());
-                    postAppointment.setMateriales(postAppointmentDTO.getMateriales());
-                    postAppointment.setAppointment(appointment);
-                    appointment.setPostAppointment(postAppointment);
-                } else {
-                    appointment.setPostAppointment(null);
                 }
 
                 appointment = appointmentRepository.save(appointment);

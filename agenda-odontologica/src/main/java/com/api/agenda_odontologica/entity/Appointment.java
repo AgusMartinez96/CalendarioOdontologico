@@ -20,24 +20,18 @@ public class Appointment {
     @JoinColumn(name = "patient_id")
     private Patient patient;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "post_appointment_id")
-    private PostAppointment postAppointment;
-
     //Constructor sin argumentos
     public Appointment() {
     }
 
     //Constructor con argumentos
 
-    public Appointment(Long id, LocalDateTime fecha, Boolean asistencia, Patient patient, PostAppointment postAppointment) {
+    public Appointment(Long id, LocalDateTime fecha, Boolean asistencia, Patient patient) {
         this.id = id;
         this.fecha = fecha;
         this.asistencia = asistencia;
         this.patient = patient;
-        this.postAppointment = postAppointment;
     }
-
 
     //Getters y Setters
 

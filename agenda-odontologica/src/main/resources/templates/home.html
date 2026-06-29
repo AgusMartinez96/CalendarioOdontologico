@@ -37,7 +37,7 @@
             <td th:text="${patient.dni}">DNI</td>
             <td th:text="${patient.obraSocial}">Obra Social</td>
             <td>
-                <a th:href="@{'/appointments/new?patientId=' + ${patient.id}}">Asignar Turno</a>
+                <a th:href="@{'/appointments/assign/' + ${patient.id}}">Asignar Turno</a>
                 <a th:href="@{'/patients/edit/' + ${patient.id}}">Editar</a>
                 <a th:href="@{'/patients/delete/' + ${patient.id}}" onclick="return confirm('¿Seguro que deseas eliminar este paciente?')">Eliminar</a>
             </td>
@@ -61,13 +61,14 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="appointment : ${appointments}">
-            <td th:text="${appointment.id}">ID</td>
-            <td th:text="${#temporals.format(appointment.fecha, 'yyyy-MM-dd HH:mm')}">Fecha</td>
-            <td th:text="${appointment.patientId}">Paciente ID</td>
-            <td th:text="${appointment.asistencia ? 'Sí' : 'No'}">Asistencia</td>
-            <td th:text="${appointment.postAppointment != null ? 'Sí' : 'No'}">Post-Turno</td>
-        </tr>
+            <tr th:each="appointment : ${appointments}">
+                <td th:text="${appointment.id}">ID</td>
+                <td th:text="${#temporals.format(appointment.fecha, 'yyyy-MM-dd')}">Fecha</td>
+                <td th:text="${#temporals.format(appointment.fecha, 'HH:mm')}">Hora</td>
+                <td th:text="${appointment.patientId}">Paciente ID</td>
+                <td th:text="${appointment.asistencia ? 'Sí' : 'No'}">Asistencia</td>
+                <td th:text="${appointment.postAppointment != null ? 'Sí' : 'No'}">Post-Turno</td>
+            </tr>
         </tbody>
     </table>
 </section>

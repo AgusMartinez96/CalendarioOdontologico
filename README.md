@@ -4,8 +4,7 @@ Un calendario para guardar turnos de pacientes y acceder a los pacientes para ve
 
 # Arrancar el proyecto
 
-PS D:\Proyectos Java VSC\CalendarioOdontologico> cd "D:\Proyectos Java VSC\CalendarioOdontologico\agenda-odontologica"
+cd "D:\Proyectos Java VSC\CalendarioOdontologico\agenda-odontologica"
 
 mvn clean install
-
 java -jar target/agenda-odontologica-0.0.1-SNAPSHOT.jar

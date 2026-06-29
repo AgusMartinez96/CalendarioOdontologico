@@ -10,11 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.stereotype.Controller;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/appointment")
+@Controller
+@RequestMapping("/appointments")
 public class AppointmentController {
 
     @Autowired
@@ -23,21 +25,37 @@ public class AppointmentController {
     @Autowired
     private PatientService patientService;
 
+    // Vista HTML con lista de turnos
+    @GetMapping("/list")
+    public String listAppointments(Model model) {
+        model.addAttribute("appointments", appointmentService.getAllAppointments());
+        return "appointments"; // plantilla appointments.html
+    }
+
+    // API REST: obtener todos los turnos
     @GetMapping
+    @ResponseBody
     public List<AppointmentDTO> getAllAppointments() {
         return appointmentService.getAllAppointments();
     }
 
+    // API REST: obtener turno por ID
     @GetMapping("/{id}")
+    @ResponseBody
     public AppointmentDTO getAppointmentById(@PathVariable Long id) {
         return appointmentService.getAppointmentById(id);
     }
-    @GetMapping("/findPatientByDni/{dni}") //endpoint verificar DNI
+    
+    // API REST: buscar paciente por DNI
+    @GetMapping("/findPatientByDni/{dni}")
+    @ResponseBody
     public PatientDTO findPatientByDni(@PathVariable String dni) {
         return patientService.findByDni(dni);
     }
 
-    @GetMapping("/available") //endpoint mostrar turnos disponibles
+    // API REST: turnos disponibles
+    @GetMapping("/available")
+    @ResponseBody
     public ResponseEntity<List<AppointmentDTO>> getAvailableAppointments() {
         try {
             List<AppointmentDTO> appointments = appointmentService.getAvailableAppointments();
@@ -47,24 +65,33 @@ public class AppointmentController {
         }
     }
 
-    // Mostrar formulario para asignar turno
+    // Vista HTML: formulario para asignar turno
     @GetMapping("/assign/{patientId}")
     public String showAssignAppointmentForm(@PathVariable Long patientId, Model model) {
         model.addAttribute("patientId", patientId);
-        return "assign_appointment"; // Muestra la plantilla assign_appointment.html
+        return "assign_appointment"; // plantilla assign_appointment.html
     }
 
-
+     // API REST: crear turno
     @PostMapping
+    @ResponseBody
     public AppointmentDTO createAppointment(@RequestBody AppointmentDTO appointmentDTO) {
         return appointmentService.saveAppointment(appointmentDTO);
     }
+
+    // API REST: solicitar turno
     @PostMapping("/request")
+    @ResponseBody
     public AppointmentDTO requestAppointment(@RequestBody AppointmentRequest appointmentRequest) {
-        return appointmentService.requestAppointment(appointmentRequest.getAppointmentDTO(), appointmentRequest.getPatientDTO());
+        return appointmentService.requestAppointment(
+                appointmentRequest.getAppointmentDTO(),
+                appointmentRequest.getPatientDTO()
+        );
     }
 
-    @PostMapping("/confirm/{appointmentId}/{patientId}") //endpoint confirmar turno
+    // Confirmar turno (texto simple)
+    @PostMapping("/confirm/{appointmentId}/{patientId}")
+    @ResponseBody
     public String confirmAppointment(@PathVariable Long appointmentId, @PathVariable Long patientId) {
         AppointmentDTO appointmentDTO = appointmentService.getAppointmentById(appointmentId);
         if (appointmentDTO != null && !appointmentDTO.getAsistencia()) {
@@ -77,19 +104,28 @@ public class AppointmentController {
         }
     }
 
-    // Guardar turno en la base de datos
+    // Guardar turno desde formulario HTML
     @PostMapping("/save")
-    public String saveAppointment(@ModelAttribute AppointmentDTO appointmentDTO) {
-        appointmentService.saveAppointment(appointmentDTO);
-        return "redirect:/dashboard"; // Redirige de nuevo al panel despues de asignar el turno
+    public String saveAppointment(@ModelAttribute AppointmentDTO appointmentDTO, RedirectAttributes redirectAttributes) {
+        try {
+            appointmentService.saveAppointment(appointmentDTO);
+            redirectAttributes.addFlashAttribute("success", "Turno asignado correctamente.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al asignar el turno.");
+        }
+        return "redirect:/appointments/list"; // redirige a la vista HTML
     }
 
+    // API REST: actualizar turno
     @PutMapping("/{id}")
+    @ResponseBody
     public AppointmentDTO updateAppointment(@PathVariable Long id, @RequestBody AppointmentDTO appointmentDTO) {
         return appointmentService.updateAppointment(id, appointmentDTO);
     }
 
+    // API REST: eliminar turno
     @DeleteMapping("/{id}")
+    @ResponseBody
     public void deleteAppointment(@PathVariable Long id) {
         appointmentService.deleteAppointment(id);
     }
