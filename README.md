@@ -101,7 +101,7 @@ La aplicación no tiene credenciales predeterminadas: `ADMIN_PASSWORD` debe conf
 
 ## Decisiones
 
-- Se conservó Maven, Spring Boot 3.4.7, Java 17 y las vistas Thymeleaf existentes en el repositorio. React/Vite es la interfaz de inicio; los controladores y la generación de turnos de ejemplo antiguos no se activan en el perfil normal.
+- Se conservó Maven, Spring Boot 3.4.7 y Java 17. React/Vite es la interfaz; `MainController` reenvía `/`, `/calendar` y `/patients` a `static/index.html`. Se retiraron los controladores y las plantillas Thymeleaf legados.
 - La base PostgreSQL nueva usa tablas `patients` y `appointments`, separadas de las antiguas tablas MySQL. No se convierte ni modifica automáticamente una base MySQL existente; sus datos requieren una migración explícita aprobada.
 - No se puede eliminar un paciente con turnos registrados. Los turnos se cancelan en lugar de borrarse.
 - Los horarios se interpretan en la zona configurada, la API transmite instantes ISO-8601 y PostgreSQL los conserva como instantes UTC.
