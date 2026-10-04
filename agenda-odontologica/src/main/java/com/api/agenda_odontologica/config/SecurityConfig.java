@@ -1,6 +1,5 @@
 package com.api.agenda_odontologica.config;
 
-import org.springframework.context.annotation.Bean;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -92,8 +91,10 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             AuthenticationEntryPoint apiAuthenticationEntryPoint,
-            AccessDeniedHandler apiAccessDeniedHandler) throws Exception {
+            AccessDeniedHandler apiAccessDeniedHandler,
+            @Value("${server.servlet.session.cookie.secure:false}") boolean secureCookies) throws Exception {
         CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        tokenRepository.setCookieCustomizer(cookie -> cookie.secure(secureCookies).sameSite("Lax"));
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
 
         http
@@ -104,8 +105,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/", "/calendar", "/patients", "/index.html",
                                 "/assets/**", "/favicon.ico", "/error", "/api/auth/csrf",
-                                "/actuator/health", "/actuator/health/**",
-                                "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                                "/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/**").hasRole("ADMIN")
                         .anyRequest().hasRole("ADMIN"))

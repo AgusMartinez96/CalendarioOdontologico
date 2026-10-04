@@ -2,9 +2,11 @@ package com.api.agenda_odontologica.api.controller;
 
 import com.api.agenda_odontologica.api.dto.ApiError;
 import com.api.agenda_odontologica.api.service.ApiException;
+import com.api.agenda_odontologica.api.service.LoginRateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,6 +22,17 @@ import java.util.List;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(LoginRateLimitException.class)
+    public ResponseEntity<ApiError> handleLoginRateLimit(
+            LoginRateLimitException exception, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.TOO_MANY_REQUESTS;
+        ApiError error = new ApiError(Instant.now(), status.value(), status.getReasonPhrase(),
+                exception.getMessage(), request.getRequestURI(), List.of());
+        return ResponseEntity.status(status)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.getRetryAfterSeconds()))
+                .body(error);
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApiException(ApiException exception, HttpServletRequest request) {
         return response(exception.getStatus(), exception.getMessage(), request, List.of());

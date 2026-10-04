@@ -2,12 +2,14 @@ package com.api.agenda_odontologica.api.controller;
 
 import com.api.agenda_odontologica.api.dto.LoginRequest;
 import com.api.agenda_odontologica.api.service.ApiException;
+import com.api.agenda_odontologica.api.security.LoginAttemptLimiter;
+import com.api.agenda_odontologica.api.service.LoginRateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -27,11 +29,15 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthApiController {
     private final AuthenticationManager authenticationManager;
+    private final LoginAttemptLimiter loginAttemptLimiter;
     private final HttpSessionSecurityContextRepository contextRepository =
             new HttpSessionSecurityContextRepository();
 
-    public AuthApiController(AuthenticationManager authenticationManager) {
+    public AuthApiController(
+            AuthenticationManager authenticationManager,
+            LoginAttemptLimiter loginAttemptLimiter) {
         this.authenticationManager = authenticationManager;
+        this.loginAttemptLimiter = loginAttemptLimiter;
     }
 
     @GetMapping("/csrf")
@@ -53,15 +59,26 @@ public class AuthApiController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest servletRequest,
             HttpServletResponse servletResponse) {
+        String clientIp = servletRequest.getRemoteAddr();
+        long retryAfterSeconds = loginAttemptLimiter.retryAfterSeconds(clientIp, request.username());
+        if (retryAfterSeconds > 0) {
+            throw new LoginRateLimitException(retryAfterSeconds);
+        }
+
         Authentication authentication;
         try {
             authentication = authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated(
                             request.username(), request.password()));
-        } catch (BadCredentialsException exception) {
+        } catch (AuthenticationException exception) {
+            retryAfterSeconds = loginAttemptLimiter.recordFailure(clientIp, request.username());
+            if (retryAfterSeconds > 0) {
+                throw new LoginRateLimitException(retryAfterSeconds);
+            }
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Usuario o contraseña incorrectos.");
         }
 
+        loginAttemptLimiter.recordSuccess(clientIp, request.username());
         if (servletRequest.getSession(false) != null) {
             servletRequest.changeSessionId();
         }

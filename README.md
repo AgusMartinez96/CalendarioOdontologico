@@ -81,6 +81,9 @@ Las pruebas de persistencia usan H2 únicamente durante los tests. Producción u
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Usuario administrador; contraseña verificada con BCrypt y obligatoria. |
 | `APP_TIME_ZONE` | Zona horaria predeterminada `America/Argentina/Buenos_Aires`; la API trabaja con instantes UTC. |
 | `CORS_ALLOWED_ORIGINS` | Orígenes CORS permitidos separados por comas; predeterminado `http://localhost:5173`. |
+| `LOGIN_MAX_ATTEMPTS` | Fallos permitidos por IP y usuario; predeterminado `5`. |
+| `LOGIN_WINDOW_MINUTES` | Ventana para contar fallos; predeterminado `15` minutos. |
+| `LOGIN_LOCK_MINUTES` | Duración del bloqueo tras alcanzar el límite; predeterminado `15` minutos. |
 | `PORT` | Puerto HTTP; predeterminado `8080`. |
 | `VITE_APP_TIME_ZONE` | Zona del calendario al compilar el frontend; predeterminada `America/Argentina/Buenos_Aires`. |
 
@@ -90,8 +93,10 @@ La aplicación no tiene credenciales predeterminadas: `ADMIN_PASSWORD` debe conf
 
 - API REST en `/api/v1/patients` y `/api/v1/appointments`; autenticación de sesión en `/api/auth/**`.
 - La API requiere sesión de administrador; autenticación y `/actuator/health` son públicos. Las escrituras están protegidas contra CSRF.
+- El inicio de sesión limita fallos por combinación de IP y usuario. El contador vive en memoria y se reinicia si la aplicación se reinicia; cada instancia mantiene su propio contador.
 - Errores JSON uniformes: solicitud inválida 400, recurso inexistente 404 y conflictos de DNI/horario 409.
-- Swagger UI: `/swagger-ui.html`. Health check: `/actuator/health`.
+- En `dev`, Swagger UI y `/v3/api-docs` requieren login con rol `ADMIN`; en `prod` ambos están deshabilitados. `/actuator/health` es público y solo informa el estado `UP` o `DOWN`.
+- En `prod`, las cookies de sesión y CSRF usan `Secure` y `SameSite=Lax`; la cookie de sesión también es `HttpOnly`. Por eso el perfil de producción requiere HTTPS. La cookie `XSRF-TOKEN` no es `HttpOnly` para que el frontend pueda leerla.
 - PostgreSQL corre migraciones Flyway en `agenda-odontologica/src/main/resources/db/migration`; Hibernate usa `ddl-auto=validate`.
 
 ## Decisiones
