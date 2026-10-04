@@ -51,6 +51,7 @@ class AuthenticationApiControllerTest {
         mvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.groups").doesNotExist())
                 .andExpect(jsonPath("$.components").doesNotExist());
         mvc.perform(get("/v3/api-docs")).andExpect(status().isUnauthorized());
         mvc.perform(get("/swagger-ui.html")).andExpect(status().isUnauthorized());
