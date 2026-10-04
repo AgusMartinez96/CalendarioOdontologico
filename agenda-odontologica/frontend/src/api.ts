@@ -22,7 +22,6 @@ export type Appointment = {
 
 export type AppointmentInput = {
   startAt: string
-  endAt: string
   patientId: number
   motivo: string
   notas: string

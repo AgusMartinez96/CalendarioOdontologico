@@ -36,13 +36,14 @@ El frontend y Spring Boot se despliegan juntos en un único servicio web; Neon p
 | `LOGIN_MAX_ATTEMPTS` | Fallos permitidos por IP y usuario antes de bloquear el siguiente intento; predeterminado `5` |
 | `LOGIN_WINDOW_MINUTES` | Ventana del contador en minutos; predeterminado `15` |
 | `LOGIN_LOCK_MINUTES` | Minutos de bloqueo tras alcanzar el límite; predeterminado `15` |
+| `APPOINTMENT_DEFAULT_MINUTES` | Duración predeterminada en minutos de los turnos nuevos; predeterminado `15` |
 | `PORT` | No lo fijes manualmente si Render proporciona la variable `PORT` al contenedor. |
 
 5. Reemplazá el ejemplo de URL en `CORS_ALLOWED_ORIGINS` por la dirección pública del servicio. No hace falta un sitio web separado.
 6. Iniciá el despliegue. Flyway crea las tablas e índices automáticamente.
 7. Verificá `/actuator/health`, abrí la URL HTTPS e iniciá sesión con las credenciales elegidas.
 
-El perfil `prod` deshabilita Swagger UI y `/v3/api-docs`. Las cookies de sesión y CSRF se marcan `Secure` y `SameSite=Lax`; la cookie de sesión también lleva `HttpOnly` y `XSRF-TOKEN` permanece legible por el frontend. El servicio debe atenderse por HTTPS. Se permiten cinco fallos de login por IP y usuario dentro de la ventana; el sexto queda bloqueado. El contador se mantiene en memoria, se reinicia al reiniciar la aplicación y no se comparte entre instancias.
+El perfil `prod` deshabilita Swagger UI y `/v3/api-docs`. Las cookies de sesión y CSRF se marcan `Secure` y `SameSite=Lax`; la cookie de sesión también lleva `HttpOnly` y `XSRF-TOKEN` permanece legible por el frontend. El servicio debe atenderse por HTTPS. Se permiten cinco fallos de login por IP y usuario dentro de la ventana; el sexto queda bloqueado. El contador se mantiene en memoria, se reinicia al reiniciar la aplicación y no se comparte entre instancias. Los turnos nuevos duran `APPOINTMENT_DEFAULT_MINUTES` (15 minutos por defecto); al cambiar el inicio de un turno existente se conserva su duración almacenada.
 
 ### 3. Comprobar la persistencia
 
@@ -62,6 +63,7 @@ CORS_ALLOWED_ORIGINS=https://TU-SERVICIO.onrender.com
 LOGIN_MAX_ATTEMPTS=5
 LOGIN_WINDOW_MINUTES=15
 LOGIN_LOCK_MINUTES=15
+APPOINTMENT_DEFAULT_MINUTES=15
 PORT=inyectada-por-Render
 ```
 

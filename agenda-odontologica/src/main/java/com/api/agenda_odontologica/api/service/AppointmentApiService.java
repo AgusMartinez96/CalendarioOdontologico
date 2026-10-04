@@ -7,11 +7,13 @@ import com.api.agenda_odontologica.api.entity.AppointmentStatus;
 import com.api.agenda_odontologica.api.entity.PatientRecord;
 import com.api.agenda_odontologica.api.repository.AppointmentRecordRepository;
 import com.api.agenda_odontologica.api.repository.PatientRecordRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -21,14 +23,20 @@ public class AppointmentApiService {
     private final AppointmentRecordRepository appointments;
     private final PatientRecordRepository patients;
     private final Clock clock;
+    private final Duration defaultDuration;
 
     public AppointmentApiService(
             AppointmentRecordRepository appointments,
             PatientRecordRepository patients,
-            Clock clock) {
+            Clock clock,
+            @Value("${app.appointments.default-minutes:15}") long defaultDurationMinutes) {
+        if (defaultDurationMinutes <= 0) {
+            throw new IllegalArgumentException("La duración predeterminada de los turnos debe ser mayor que cero.");
+        }
         this.appointments = appointments;
         this.patients = patients;
         this.clock = clock;
+        this.defaultDuration = Duration.ofMinutes(defaultDurationMinutes);
     }
 
     @Transactional(readOnly = true)
@@ -50,20 +58,23 @@ public class AppointmentApiService {
     }
 
     public AppointmentResponse create(AppointmentRequest request) {
-        validateTime(request);
+        validateStart(request.startAt());
         PatientRecord patient = requirePatient(request.patientId());
-        ensureAvailable(request, null);
+        Instant endAt = request.startAt().plus(defaultDuration);
+        ensureAvailable(request.startAt(), endAt, request.estado(), null);
         AppointmentRecord appointment = new AppointmentRecord();
-        apply(appointment, request, patient);
+        apply(appointment, request, patient, endAt);
         return new AppointmentResponse(appointments.save(appointment));
     }
 
     public AppointmentResponse update(Long id, AppointmentRequest request) {
         AppointmentRecord appointment = requireAppointment(id);
-        validateTime(request);
+        validateStart(request.startAt());
         PatientRecord patient = requirePatient(request.patientId());
-        ensureAvailable(request, id);
-        apply(appointment, request, patient);
+        Duration existingDuration = Duration.between(appointment.getStartAt(), appointment.getEndAt());
+        Instant endAt = request.startAt().plus(existingDuration);
+        ensureAvailable(request.startAt(), endAt, request.estado(), id);
+        apply(appointment, request, patient, endAt);
         return new AppointmentResponse(appointments.save(appointment));
     }
 
@@ -73,32 +84,29 @@ public class AppointmentApiService {
         return new AppointmentResponse(appointments.save(appointment));
     }
 
-    private void validateTime(AppointmentRequest request) {
-        if (request.startAt() == null || request.endAt() == null
-                || !request.endAt().isAfter(request.startAt())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST,
-                    "La fecha y hora de fin debe ser posterior al inicio.");
-        }
-        if (request.startAt().isBefore(clock.instant())) {
+    private void validateStart(Instant startAt) {
+        if (startAt == null || startAt.isBefore(clock.instant())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "No se pueden crear turnos en el pasado.");
         }
     }
 
-    private void ensureAvailable(AppointmentRequest request, Long excludeId) {
-        AppointmentStatus status = request.estado() == null ? AppointmentStatus.PROGRAMADO : request.estado();
+    private void ensureAvailable(Instant startAt, Instant endAt, AppointmentStatus requestedStatus, Long excludeId) {
+        AppointmentStatus status = requestedStatus == null ? AppointmentStatus.PROGRAMADO : requestedStatus;
+        if (status == AppointmentStatus.CANCELADO) {
+            return;
+        }
         boolean overlaps = excludeId == null
-                ? appointments.hasOverlap(request.startAt(), request.endAt(), AppointmentStatus.CANCELADO)
-                : appointments.hasOverlapExcluding(
-                        request.startAt(), request.endAt(), AppointmentStatus.CANCELADO, excludeId);
-        if (status != AppointmentStatus.CANCELADO && overlaps) {
+                ? appointments.hasOverlap(startAt, endAt, AppointmentStatus.CANCELADO)
+                : appointments.hasOverlapExcluding(startAt, endAt, AppointmentStatus.CANCELADO, excludeId);
+        if (overlaps) {
             throw new ApiException(HttpStatus.CONFLICT, "El horario se superpone con otro turno.");
         }
     }
 
     private static void apply(
-            AppointmentRecord appointment, AppointmentRequest request, PatientRecord patient) {
+            AppointmentRecord appointment, AppointmentRequest request, PatientRecord patient, Instant endAt) {
         appointment.setStartAt(request.startAt());
-        appointment.setEndAt(request.endAt());
+        appointment.setEndAt(endAt);
         appointment.setPatient(patient);
         appointment.setMotivo(request.motivo().trim());
         appointment.setNotas(normalize(request.notas()));

@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,7 +42,7 @@ class AppointmentApiServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AppointmentApiService(appointments, patients, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new AppointmentApiService(appointments, patients, Clock.fixed(NOW, ZoneOffset.UTC), 15);
         patient = new PatientRecord("Ana", "Pérez", "1234", "111", null);
     }
 
@@ -53,26 +54,54 @@ class AppointmentApiServiceTest {
         when(appointments.save(any(AppointmentRecord.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = service.create(request(NOW.plusSeconds(3600), NOW.plusSeconds(5400)));
+        var response = service.create(request(NOW.plusSeconds(3600)));
 
         assertEquals(AppointmentStatus.PROGRAMADO, response.estado());
         assertEquals(NOW.plusSeconds(3600), response.startAt());
-        verify(appointments).hasOverlap(NOW.plusSeconds(3600), NOW.plusSeconds(5400),
+        assertEquals(NOW.plusSeconds(4500), response.endAt());
+        verify(appointments).hasOverlap(NOW.plusSeconds(3600), NOW.plusSeconds(4500),
                 AppointmentStatus.CANCELADO);
+    }
+
+    @Test
+    void createsAppointmentUsingConfiguredDefaultDuration() {
+        service = new AppointmentApiService(
+                appointments, patients, Clock.fixed(NOW, ZoneOffset.UTC), 45);
+        when(patients.findById(1L)).thenReturn(Optional.of(patient));
+        when(appointments.hasOverlap(any(), any(), eq(AppointmentStatus.CANCELADO)))
+                .thenReturn(false);
+        when(appointments.save(any(AppointmentRecord.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.create(request(NOW.plusSeconds(3600)));
+
+        assertEquals(NOW.plusSeconds(6300), response.endAt());
+    }
+
+    @Test
+    void updatingStartPreservesExistingAppointmentDuration() {
+        AppointmentRecord appointment = new AppointmentRecord();
+        appointment.setStartAt(NOW.plusSeconds(3600));
+        appointment.setEndAt(NOW.plusSeconds(7200));
+        when(appointments.findById(1L)).thenReturn(Optional.of(appointment));
+        when(patients.findById(1L)).thenReturn(Optional.of(patient));
+        when(appointments.hasOverlapExcluding(any(), any(), eq(AppointmentStatus.CANCELADO), eq(1L)))
+                .thenReturn(false);
+        when(appointments.save(any(AppointmentRecord.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.update(1L, request(NOW.plusSeconds(10_800)));
+
+        assertEquals(NOW.plusSeconds(10_800), response.startAt());
+        assertEquals(NOW.plusSeconds(14_400), response.endAt());
+        verify(appointments).hasOverlapExcluding(NOW.plusSeconds(10_800), NOW.plusSeconds(14_400),
+                AppointmentStatus.CANCELADO, 1L);
     }
 
     @Test
     void rejectsAppointmentInThePast() {
         ApiException exception = assertThrows(ApiException.class,
-                () -> service.create(request(NOW.minusSeconds(60), NOW.plusSeconds(60))));
-
-        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
-    }
-
-    @Test
-    void rejectsEndBeforeStart() {
-        ApiException exception = assertThrows(ApiException.class,
-                () -> service.create(request(NOW.plusSeconds(3600), NOW.plusSeconds(1800))));
+                () -> service.create(request(NOW.minusSeconds(60))));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
     }
@@ -84,9 +113,25 @@ class AppointmentApiServiceTest {
                 .thenReturn(true);
 
         ApiException exception = assertThrows(ApiException.class,
-                () -> service.create(request(NOW.plusSeconds(3600), NOW.plusSeconds(5400))));
+                () -> service.create(request(NOW.plusSeconds(3600))));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatus());
+        verify(appointments).hasOverlap(NOW.plusSeconds(3600), NOW.plusSeconds(4500),
+                AppointmentStatus.CANCELADO);
+    }
+
+    @Test
+    void cancelledAppointmentDoesNotBlockItsCalculatedSlot() {
+        when(patients.findById(1L)).thenReturn(Optional.of(patient));
+        when(appointments.save(any(AppointmentRecord.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.create(request(
+                NOW.plusSeconds(3600), AppointmentStatus.CANCELADO));
+
+        assertEquals(AppointmentStatus.CANCELADO, response.estado());
+        assertEquals(NOW.plusSeconds(4500), response.endAt());
+        verify(appointments, never()).hasOverlap(any(), any(), any());
     }
 
     @Test
@@ -94,12 +139,16 @@ class AppointmentApiServiceTest {
         when(patients.findById(1L)).thenReturn(Optional.empty());
 
         ApiException exception = assertThrows(ApiException.class,
-                () -> service.create(request(NOW.plusSeconds(3600), NOW.plusSeconds(5400))));
+                () -> service.create(request(NOW.plusSeconds(3600))));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
     }
 
-    private AppointmentRequest request(Instant start, Instant end) {
-        return new AppointmentRequest(start, end, 1L, "Consulta", null, null);
+    private AppointmentRequest request(Instant start) {
+        return request(start, null);
+    }
+
+    private AppointmentRequest request(Instant start, AppointmentStatus status) {
+        return new AppointmentRequest(start, 1L, "Consulta", null, status);
     }
 }

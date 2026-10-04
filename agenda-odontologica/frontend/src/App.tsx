@@ -26,7 +26,6 @@ const EMPTY_PATIENT: PatientInput = { nombre: '', apellido: '', dni: '', telefon
 type AppointmentDraft = {
   id?: number
   startAt: string
-  endAt: string
   patientId: string
   motivo: string
   notas: string
@@ -49,7 +48,6 @@ function draftFrom(appointment: Appointment): AppointmentDraft {
   return {
     id: appointment.id,
     startAt: localInput(new Date(appointment.startAt)),
-    endAt: localInput(new Date(appointment.endAt)),
     patientId: String(appointment.patientId),
     motivo: appointment.motivo,
     notas: appointment.notas ?? '',
@@ -173,11 +171,9 @@ function App() {
 
   function onSlotSelect(info: DateSelectArg) {
     const startAt = localInput(info.start)
-    const endAt = localInput(info.end)
     info.view.calendar.unselect()
     setAppointmentDraft({
       startAt,
-      endAt,
       patientId: '',
       motivo: '',
       notas: '',
@@ -198,7 +194,6 @@ function App() {
     try {
       const input: AppointmentInput = {
         startAt: toInstant(appointmentDraft.startAt),
-        endAt: toInstant(appointmentDraft.endAt),
         patientId: Number(appointmentDraft.patientId),
         motivo: appointmentDraft.motivo.trim(),
         notas: appointmentDraft.notas.trim(),
@@ -337,7 +332,7 @@ function App() {
           </div>
           {view === 'patients' && <button className="primary-button" onClick={openNewPatient}>＋ Nuevo paciente</button>}
           {view === 'calendar' && <button className="primary-button" onClick={() => setAppointmentDraft({
-            startAt: localInput(new Date()), endAt: localInput(new Date(Date.now() + 60 * 60 * 1000)),
+            startAt: localInput(new Date()),
             patientId: '', motivo: '', notas: '', estado: 'PROGRAMADO',
           })}>＋ Nuevo turno</button>}
         </header>
@@ -379,6 +374,8 @@ function App() {
                 allDaySlot={false}
                 selectable
                 selectMirror
+                displayEventEnd={false}
+                eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
                 select={onSlotSelect}
                 eventClick={onEventClick}
                 events={events}
@@ -451,8 +448,6 @@ function App() {
               </label>
               <label>Inicio<input type="datetime-local" required value={appointmentDraft.startAt}
                 onChange={(event) => setAppointmentDraft({ ...appointmentDraft, startAt: event.target.value })} /></label>
-              <label>Fin<input type="datetime-local" required value={appointmentDraft.endAt}
-                onChange={(event) => setAppointmentDraft({ ...appointmentDraft, endAt: event.target.value })} /></label>
               <label>Motivo<input required maxLength={200} value={appointmentDraft.motivo} placeholder="Ej. Control"
                 onChange={(event) => setAppointmentDraft({ ...appointmentDraft, motivo: event.target.value })} /></label>
               <label>Estado<select value={appointmentDraft.estado}

@@ -84,6 +84,7 @@ Las pruebas de persistencia usan H2 únicamente durante los tests. Producción u
 | `LOGIN_MAX_ATTEMPTS` | Fallos permitidos por IP y usuario antes de bloquear el siguiente intento; predeterminado `5`. |
 | `LOGIN_WINDOW_MINUTES` | Ventana para contar fallos; predeterminado `15` minutos. |
 | `LOGIN_LOCK_MINUTES` | Duración del bloqueo tras alcanzar el límite; predeterminado `15` minutos. |
+| `APPOINTMENT_DEFAULT_MINUTES` | Duración en minutos asignada a un turno nuevo; predeterminado `15`. Al editar un turno, la duración existente se conserva aunque cambie el inicio. |
 | `PORT` | Puerto HTTP; predeterminado `8080`. |
 | `VITE_APP_TIME_ZONE` | Zona del calendario al compilar el frontend; predeterminada `America/Argentina/Buenos_Aires`. |
 
@@ -94,7 +95,7 @@ La aplicación no tiene credenciales predeterminadas: `ADMIN_PASSWORD` debe conf
 - API REST en `/api/v1/patients` y `/api/v1/appointments`; autenticación de sesión en `/api/auth/**`.
 - La API requiere sesión de administrador; autenticación y `/actuator/health` son públicos. Las escrituras están protegidas contra CSRF.
 - El inicio de sesión permite cinco fallos por combinación de IP y usuario dentro de la ventana; el sexto intento queda bloqueado durante el período configurado. El contador vive en memoria y se reinicia si la aplicación se reinicia; cada instancia mantiene su propio contador.
-- Errores JSON uniformes: solicitud inválida 400, recurso inexistente 404 y conflictos de DNI/horario 409.
+- Errores JSON uniformes: solicitud inválida 400, recurso inexistente 404 y conflictos de DNI/horario 409. Al crear un turno se calcula el fin con `APPOINTMENT_DEFAULT_MINUTES`; al cambiar el inicio de uno existente se conserva su duración previa.
 - En `dev`, Swagger UI y `/v3/api-docs` requieren login con rol `ADMIN`; en `prod` ambos están deshabilitados. `/actuator/health` es público y solo informa el estado `UP` o `DOWN`.
 - En `prod`, las cookies de sesión y CSRF usan `Secure` y `SameSite=Lax`; la cookie de sesión también es `HttpOnly`. Por eso el perfil de producción requiere HTTPS. La cookie `XSRF-TOKEN` no es `HttpOnly` para que el frontend pueda leerla.
 - PostgreSQL corre migraciones Flyway en `agenda-odontologica/src/main/resources/db/migration`; Hibernate usa `ddl-auto=validate`.
