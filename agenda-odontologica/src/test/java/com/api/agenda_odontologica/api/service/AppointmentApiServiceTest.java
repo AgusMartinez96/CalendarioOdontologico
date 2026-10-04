@@ -48,7 +48,7 @@ class AppointmentApiServiceTest {
     @Test
     void createsAppointmentWhenSlotIsFree() {
         when(patients.findById(1L)).thenReturn(Optional.of(patient));
-        when(appointments.hasOverlap(any(), any(), eq(AppointmentStatus.CANCELADO), eq(null)))
+        when(appointments.hasOverlap(any(), any(), eq(AppointmentStatus.CANCELADO)))
                 .thenReturn(false);
         when(appointments.save(any(AppointmentRecord.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -58,7 +58,7 @@ class AppointmentApiServiceTest {
         assertEquals(AppointmentStatus.PROGRAMADO, response.estado());
         assertEquals(NOW.plusSeconds(3600), response.startAt());
         verify(appointments).hasOverlap(NOW.plusSeconds(3600), NOW.plusSeconds(5400),
-                AppointmentStatus.CANCELADO, null);
+                AppointmentStatus.CANCELADO);
     }
 
     @Test
@@ -80,7 +80,7 @@ class AppointmentApiServiceTest {
     @Test
     void rejectsOverlappingAppointment() {
         when(patients.findById(1L)).thenReturn(Optional.of(patient));
-        when(appointments.hasOverlap(any(), any(), eq(AppointmentStatus.CANCELADO), eq(null)))
+        when(appointments.hasOverlap(any(), any(), eq(AppointmentStatus.CANCELADO)))
                 .thenReturn(true);
 
         ApiException exception = assertThrows(ApiException.class,

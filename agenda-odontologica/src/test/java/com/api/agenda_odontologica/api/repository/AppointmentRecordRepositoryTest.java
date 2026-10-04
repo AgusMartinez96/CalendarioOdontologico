@@ -45,17 +45,73 @@ class AppointmentRecordRepositoryTest {
         assertThat(appointments.hasOverlap(
                 Instant.parse("2026-10-05T12:30:00Z"),
                 Instant.parse("2026-10-05T13:30:00Z"),
-                AppointmentStatus.CANCELADO, null)).isTrue();
+                AppointmentStatus.CANCELADO)).isTrue();
+        assertThat(appointments.hasOverlapExcluding(
+                Instant.parse("2026-10-05T12:30:00Z"),
+                Instant.parse("2026-10-05T13:30:00Z"),
+                AppointmentStatus.CANCELADO, appointment.getId())).isFalse();
         assertThat(appointments.hasOverlap(
                 Instant.parse("2026-10-05T13:00:00Z"),
                 Instant.parse("2026-10-05T14:00:00Z"),
-                AppointmentStatus.CANCELADO, null)).isFalse();
+                AppointmentStatus.CANCELADO)).isFalse();
 
         appointment.setEstado(AppointmentStatus.CANCELADO);
         appointments.saveAndFlush(appointment);
         assertThat(appointments.hasOverlap(
                 Instant.parse("2026-10-05T12:30:00Z"),
                 Instant.parse("2026-10-05T13:30:00Z"),
-                AppointmentStatus.CANCELADO, null)).isFalse();
+                AppointmentStatus.CANCELADO)).isFalse();
+    }
+
+    @Test
+    void supportsAppointmentListsWithNoNullableFilters() {
+        PatientRecord ana = patients.saveAndFlush(
+                new PatientRecord("Ana", "Alvarez", "101", "111", null));
+        PatientRecord beto = patients.saveAndFlush(
+                new PatientRecord("Beto", "Benitez", "202", "222", null));
+        saveAppointment(ana, "2026-10-05T12:00:00Z", "2026-10-05T13:00:00Z",
+                AppointmentStatus.PROGRAMADO);
+        saveAppointment(beto, "2026-10-06T12:00:00Z", "2026-10-06T13:00:00Z",
+                AppointmentStatus.CONFIRMADO);
+
+        Instant from = Instant.parse("2026-10-05T00:00:00Z");
+        Instant to = Instant.parse("2026-10-07T00:00:00Z");
+        assertThat(appointments.findInRange(from, to, "")).hasSize(2);
+        assertThat(appointments.findInRange(from, to, "Beto"))
+                .extracting(appointment -> appointment.getPatient().getNombre())
+                .containsExactly("Beto");
+        assertThat(appointments.findInRangeByStatus(
+                from, to, AppointmentStatus.CONFIRMADO, "")).hasSize(1);
+        assertThat(appointments.findInRange(
+                Instant.parse("2026-10-06T00:00:00Z"),
+                Instant.parse("2026-10-07T00:00:00Z"), "")).hasSize(1);
+        assertThat(appointments.findInRangeByStatus(
+                Instant.parse("2026-10-06T00:00:00Z"),
+                Instant.parse("2026-10-07T00:00:00Z"),
+                AppointmentStatus.CONFIRMADO, "Beto"))
+                .extracting(appointment -> appointment.getPatient().getNombre())
+                .containsExactly("Beto");
+    }
+
+    @Test
+    void supportsPatientListsWithNoNullableTextFilter() {
+        patients.saveAndFlush(new PatientRecord("Ana", "Alvarez", "101", "111", null));
+        patients.saveAndFlush(new PatientRecord("Beto", "Benitez", "202", "222", null));
+
+        assertThat(patients.search("")).hasSize(2);
+        assertThat(patients.search("beto"))
+                .extracting(PatientRecord::getNombre)
+                .containsExactly("Beto");
+    }
+
+    private void saveAppointment(
+            PatientRecord patient, String startAt, String endAt, AppointmentStatus status) {
+        AppointmentRecord appointment = new AppointmentRecord();
+        appointment.setPatient(patient);
+        appointment.setStartAt(Instant.parse(startAt));
+        appointment.setEndAt(Instant.parse(endAt));
+        appointment.setMotivo("Consulta");
+        appointment.setEstado(status);
+        appointments.saveAndFlush(appointment);
     }
 }

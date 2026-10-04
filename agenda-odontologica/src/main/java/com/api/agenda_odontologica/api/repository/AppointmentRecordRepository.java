@@ -17,9 +17,20 @@ public interface AppointmentRecordRepository extends JpaRepository<AppointmentRe
             where a.estado <> :cancelled
               and a.startAt < :endAt
               and a.endAt > :startAt
-              and (:excludeId is null or a.id <> :excludeId)
             """)
     boolean hasOverlap(
+            @Param("startAt") Instant startAt,
+            @Param("endAt") Instant endAt,
+            @Param("cancelled") AppointmentStatus cancelled);
+
+    @Query("""
+            select (count(a) > 0) from AppointmentRecord a
+            where a.estado <> :cancelled
+              and a.startAt < :endAt
+              and a.endAt > :startAt
+              and a.id <> :excludeId
+            """)
+    boolean hasOverlapExcluding(
             @Param("startAt") Instant startAt,
             @Param("endAt") Instant endAt,
             @Param("cancelled") AppointmentStatus cancelled,
@@ -29,14 +40,29 @@ public interface AppointmentRecordRepository extends JpaRepository<AppointmentRe
             select a from AppointmentRecord a
             join fetch a.patient p
             where a.startAt < :to and a.endAt > :from
-              and (:status is null or a.estado = :status)
-              and (:search is null
+              and (:search = ''
                    or lower(p.nombre) like lower(concat('%', :search, '%'))
                    or lower(p.apellido) like lower(concat('%', :search, '%'))
                    or lower(p.dni) like lower(concat('%', :search, '%')))
             order by a.startAt
             """)
     List<AppointmentRecord> findInRange(
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("search") String search);
+
+    @Query("""
+            select a from AppointmentRecord a
+            join fetch a.patient p
+            where a.startAt < :to and a.endAt > :from
+              and a.estado = :status
+              and (:search = ''
+                   or lower(p.nombre) like lower(concat('%', :search, '%'))
+                   or lower(p.apellido) like lower(concat('%', :search, '%'))
+                   or lower(p.dni) like lower(concat('%', :search, '%')))
+            order by a.startAt
+            """)
+    List<AppointmentRecord> findInRangeByStatus(
             @Param("from") Instant from,
             @Param("to") Instant to,
             @Param("status") AppointmentStatus status,

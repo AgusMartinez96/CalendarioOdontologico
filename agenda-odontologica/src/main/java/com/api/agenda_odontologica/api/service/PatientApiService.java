@@ -25,7 +25,7 @@ public class PatientApiService {
 
     @Transactional(readOnly = true)
     public List<PatientResponse> list(String search) {
-        String query = normalize(search);
+        String query = search == null || search.isBlank() ? "" : search.trim();
         return patients.search(query).stream().map(PatientResponse::new).toList();
     }
 

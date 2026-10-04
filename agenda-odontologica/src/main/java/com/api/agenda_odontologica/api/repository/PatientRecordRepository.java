@@ -14,7 +14,7 @@ public interface PatientRecordRepository extends JpaRepository<PatientRecord, Lo
 
     @Query("""
             select p from PatientRecord p
-            where :search is null
+            where :search = ''
                or lower(p.nombre) like lower(concat('%', :search, '%'))
                or lower(p.apellido) like lower(concat('%', :search, '%'))
                or lower(p.dni) like lower(concat('%', :search, '%'))

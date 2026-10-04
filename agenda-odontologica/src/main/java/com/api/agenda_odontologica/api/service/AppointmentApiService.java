@@ -37,8 +37,11 @@ public class AppointmentApiService {
         if (from == null || to == null || !to.isAfter(from)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "El rango de fechas es inválido.");
         }
-        return appointments.findInRange(from, to, status, normalize(patientSearch))
-                .stream().map(AppointmentResponse::new).toList();
+        String search = patientSearch == null || patientSearch.isBlank() ? "" : patientSearch.trim();
+        List<AppointmentRecord> results = status == null
+                ? appointments.findInRange(from, to, search)
+                : appointments.findInRangeByStatus(from, to, status, search);
+        return results.stream().map(AppointmentResponse::new).toList();
     }
 
     @Transactional(readOnly = true)
@@ -83,8 +86,11 @@ public class AppointmentApiService {
 
     private void ensureAvailable(AppointmentRequest request, Long excludeId) {
         AppointmentStatus status = request.estado() == null ? AppointmentStatus.PROGRAMADO : request.estado();
-        if (status != AppointmentStatus.CANCELADO && appointments.hasOverlap(
-                request.startAt(), request.endAt(), AppointmentStatus.CANCELADO, excludeId)) {
+        boolean overlaps = excludeId == null
+                ? appointments.hasOverlap(request.startAt(), request.endAt(), AppointmentStatus.CANCELADO)
+                : appointments.hasOverlapExcluding(
+                        request.startAt(), request.endAt(), AppointmentStatus.CANCELADO, excludeId);
+        if (status != AppointmentStatus.CANCELADO && overlaps) {
             throw new ApiException(HttpStatus.CONFLICT, "El horario se superpone con otro turno.");
         }
     }
