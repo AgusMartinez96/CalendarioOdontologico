@@ -8,12 +8,14 @@ import com.api.agenda_odontologica.repository.AppointmentRepository;
 import com.api.agenda_odontologica.repository.PatientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Profile("legacy-ui")
 public class AppointmentService {
 
     @Autowired

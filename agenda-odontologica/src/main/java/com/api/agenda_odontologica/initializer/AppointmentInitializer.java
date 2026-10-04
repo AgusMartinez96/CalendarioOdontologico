@@ -5,12 +5,14 @@ import com.api.agenda_odontologica.repository.AppointmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@Profile("legacy-ui")
 public class AppointmentInitializer implements CommandLineRunner {
 
     @Autowired

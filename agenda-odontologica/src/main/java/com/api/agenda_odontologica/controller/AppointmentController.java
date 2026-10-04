@@ -12,10 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.stereotype.Controller;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 
 @Controller
+@Profile("legacy-ui")
 @RequestMapping("/appointments")
 public class AppointmentController {
 

@@ -4,12 +4,14 @@ import com.api.agenda_odontologica.dto.PatientDTO;
 import com.api.agenda_odontologica.entity.Patient;
 import com.api.agenda_odontologica.repository.PatientRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Profile("legacy-ui")
 public class PatientService {
 
     private final PatientRepository patientRepository;
