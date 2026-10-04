@@ -130,13 +130,16 @@ function App() {
     () =>
       appointments.map((appointment) => ({
         id: String(appointment.id),
-        title: `${displayTime(appointment.startAt)} · ${appointment.patientName} — ${appointment.motivo}`,
+        title: `${displayTime(appointment.startAt)} · ${appointment.patientName} — ${appointment.motivo} · ${statusLabel(appointment.estado)}`,
         start: appointment.startAt,
         end: appointment.endAt,
-        classNames: [`appointment-${appointment.estado.toLowerCase()}`],
+        classNames: [
+          `appointment-${appointment.estado.toLowerCase()}`,
+          ...(appointmentDraft?.id === appointment.id ? ['appointment-selected'] : []),
+        ],
         extendedProps: { appointment },
       })),
-    [appointments],
+    [appointmentDraft?.id, appointments],
   )
 
   async function onLogin(event: FormEvent<HTMLFormElement>) {
@@ -376,6 +379,17 @@ function App() {
                 selectMirror
                 displayEventEnd={false}
                 eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+                eventContent={(info) => {
+                  const appointment = info.event.extendedProps.appointment as Appointment
+                  return (
+                    <>
+                      <span className="appointment-status-icon" aria-hidden="true">
+                        {statusIcon(appointment.estado)}
+                      </span>
+                      <span>{info.timeText} · {appointment.patientName} — {appointment.motivo}</span>
+                    </>
+                  )
+                }}
                 select={onSlotSelect}
                 eventClick={onEventClick}
                 events={events}
@@ -509,6 +523,15 @@ function statusLabel(status: AppointmentStatus): string {
     CONFIRMADO: 'Confirmado',
     CANCELADO: 'Cancelado',
     ATENDIDO: 'Atendido',
+  }[status]
+}
+
+function statusIcon(status: AppointmentStatus): string {
+  return {
+    PROGRAMADO: '○',
+    CONFIRMADO: '✓',
+    CANCELADO: '×',
+    ATENDIDO: '●',
   }[status]
 }
 
