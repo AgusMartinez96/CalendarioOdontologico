@@ -86,6 +86,39 @@ class AuthenticationApiControllerTest {
     }
 
     @Test
+    void logoutReturnsNoContentAndClearsAuthenticatedSession() throws Exception {
+        MvcResult csrfResult = mvc.perform(get("/api/auth/csrf"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode csrf = objectMapper.readTree(csrfResult.getResponse().getContentAsString());
+        String token = csrf.get("token").asText();
+        String headerName = csrf.get("headerName").asText();
+
+        MvcResult loginResult = mvc.perform(post("/api/auth/login")
+                        .cookie(new Cookie("XSRF-TOKEN", token))
+                        .header(headerName, token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"test-admin","password":"test-password"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+
+        mvc.perform(post("/api/auth/logout")
+                        .session(session)
+                        .cookie(new Cookie("XSRF-TOKEN", token))
+                        .header(headerName, token))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/auth/session"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.authenticated").value(false));
+        mvc.perform(get("/api/v1/patients"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void locksAfterConfiguredFailedAttemptsWithRetryAfterAndUniformError() throws Exception {
         String ip = "192.0.2.10";
         for (int i = 0; i < 5; i++) {
