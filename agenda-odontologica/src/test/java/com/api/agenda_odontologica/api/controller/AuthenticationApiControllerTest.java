@@ -88,7 +88,7 @@ class AuthenticationApiControllerTest {
     @Test
     void locksAfterConfiguredFailedAttemptsWithRetryAfterAndUniformError() throws Exception {
         String ip = "192.0.2.10";
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             login("test-admin", "wrong-password", ip).andExpect(status().isUnauthorized());
         }
 
@@ -104,13 +104,13 @@ class AuthenticationApiControllerTest {
     @Test
     void successfulLoginResetsFailureCounter() throws Exception {
         String ip = "192.0.2.11";
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             login("test-admin", "wrong-password", ip).andExpect(status().isUnauthorized());
         }
 
         login("test-admin", "test-password", ip).andExpect(status().isOk());
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             login("test-admin", "wrong-password", ip).andExpect(status().isUnauthorized());
         }
         login("test-admin", "wrong-password", ip).andExpect(status().isTooManyRequests());
@@ -119,7 +119,7 @@ class AuthenticationApiControllerTest {
     @Test
     void isolatesFailuresByIpAndUsername() throws Exception {
         String ip = "192.0.2.12";
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             login("test-admin", "wrong-password", ip).andExpect(status().isUnauthorized());
         }
 

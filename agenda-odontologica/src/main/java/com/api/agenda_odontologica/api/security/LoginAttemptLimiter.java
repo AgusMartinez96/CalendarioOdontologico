@@ -53,7 +53,7 @@ public class LoginAttemptLimiter {
         }
 
         state.failures++;
-        if (state.failures < maxAttempts) {
+        if (state.failures <= maxAttempts) {
             return 0;
         }
 

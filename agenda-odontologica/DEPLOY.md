@@ -33,7 +33,7 @@ El frontend y Spring Boot se despliegan juntos en un único servicio web; Neon p
 | `ADMIN_PASSWORD` | Contraseña robusta de administrador (**secreto**) |
 | `APP_TIME_ZONE` | `America/Argentina/Buenos_Aires` |
 | `CORS_ALLOWED_ORIGINS` | URL HTTPS pública del servicio; por ejemplo `https://tu-servicio.onrender.com` |
-| `LOGIN_MAX_ATTEMPTS` | Fallos permitidos por IP y usuario; predeterminado `5` |
+| `LOGIN_MAX_ATTEMPTS` | Fallos permitidos por IP y usuario antes de bloquear el siguiente intento; predeterminado `5` |
 | `LOGIN_WINDOW_MINUTES` | Ventana del contador en minutos; predeterminado `15` |
 | `LOGIN_LOCK_MINUTES` | Minutos de bloqueo tras alcanzar el límite; predeterminado `15` |
 | `PORT` | No lo fijes manualmente si Render proporciona la variable `PORT` al contenedor. |
@@ -42,7 +42,7 @@ El frontend y Spring Boot se despliegan juntos en un único servicio web; Neon p
 6. Iniciá el despliegue. Flyway crea las tablas e índices automáticamente.
 7. Verificá `/actuator/health`, abrí la URL HTTPS e iniciá sesión con las credenciales elegidas.
 
-El perfil `prod` deshabilita Swagger UI y `/v3/api-docs`. Las cookies de sesión y CSRF se marcan `Secure` y `SameSite=Lax`; la cookie de sesión también lleva `HttpOnly` y `XSRF-TOKEN` permanece legible por el frontend. El servicio debe atenderse por HTTPS. Los intentos de login se cuentan en memoria por IP y usuario; el contador se reinicia al reiniciar la aplicación y no se comparte entre instancias.
+El perfil `prod` deshabilita Swagger UI y `/v3/api-docs`. Las cookies de sesión y CSRF se marcan `Secure` y `SameSite=Lax`; la cookie de sesión también lleva `HttpOnly` y `XSRF-TOKEN` permanece legible por el frontend. El servicio debe atenderse por HTTPS. Se permiten cinco fallos de login por IP y usuario dentro de la ventana; el sexto queda bloqueado. El contador se mantiene en memoria, se reinicia al reiniciar la aplicación y no se comparte entre instancias.
 
 ### 3. Comprobar la persistencia
 
