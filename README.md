@@ -2,6 +2,25 @@
 
 Aplicación web privada para que un consultorio odontológico administre pacientes y turnos. Incluye calendario mensual, semanal y diario, filtros, registro simple con usuario y contraseña (sin email) y persistencia en PostgreSQL. Cada cuenta ve y administra solo sus propios pacientes y turnos.
 
+## Demo en línea
+
+**URL:** https://agenda-odontologica-upl2.onrender.com
+
+Cómo probarla:
+
+1. Abrí el enlace. Si la aplicación estaba inactiva, **el primer ingreso puede tardar hasta un minuto** (limitación del plan gratuito de Render).
+2. Tocá **Crear cuenta**, elegí un usuario (3 a 30 caracteres) y una contraseña de al menos 10 caracteres. No hace falta email.
+3. Entrás directo con un calendario vacío: cargá un paciente y un turno.
+
+Notas:
+
+- Cada cuenta ve únicamente sus propios pacientes y turnos.
+- Usá **datos ficticios**: es una demo, no cargues personas reales.
+- No hay recuperación de contraseña: si la olvidás, creá otra cuenta.
+- El cupo de cuentas es limitado (50) y los datos de la demo pueden borrarse en cualquier momento.
+
+Stack: Java 17, Spring Boot 3.4, Spring Security, JPA/Hibernate, Flyway, PostgreSQL (Neon), React + TypeScript + Vite, FullCalendar y Docker. Desplegada en Render.
+
 ## Requisitos
 
 - Java 17 para ejecutar y probar el backend.
