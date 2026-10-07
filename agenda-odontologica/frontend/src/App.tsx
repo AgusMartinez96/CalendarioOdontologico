@@ -347,11 +347,11 @@ function App() {
             )}
             <div className="calendar-tools">
               <label className="search-field"><span>⌕</span>
-                <input aria-label="Buscar paciente" placeholder="Buscar paciente…" value={patientSearch}
+                <input name="patientSearch" aria-label="Buscar paciente" placeholder="Buscar paciente…" value={patientSearch}
                   onChange={(event) => setPatientSearch(event.target.value)} />
               </label>
               <label className="filter-select"><span>Estado</span>
-                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <select name="status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="">Todos</option>
                   {STATUSES.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
                 </select>
@@ -404,7 +404,7 @@ function App() {
             <div className="patients-toolbar">
               <p className="muted">{patients.length} {patients.length === 1 ? 'paciente registrado' : 'pacientes registrados'}</p>
               <label className="search-field"><span>⌕</span>
-                <input aria-label="Buscar pacientes" placeholder="Buscar por nombre o DNI…" value={patientSearch}
+                <input name="patientSearch" aria-label="Buscar pacientes" placeholder="Buscar por nombre o DNI…" value={patientSearch}
                   onChange={(event) => setPatientSearch(event.target.value)} />
               </label>
             </div>

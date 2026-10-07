@@ -5,7 +5,12 @@ import com.api.agenda_odontologica.api.service.ApiException;
 import com.api.agenda_odontologica.api.service.FieldValidationException;
 import com.api.agenda_odontologica.api.service.RateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -23,6 +28,8 @@ import java.util.List;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
     @ExceptionHandler(FieldValidationException.class)
     public ResponseEntity<ApiError> handleFieldValidation(
             FieldValidationException exception, HttpServletRequest request) {
@@ -77,6 +84,22 @@ public class ApiExceptionHandler {
         HttpStatus status = HttpStatus.valueOf(exception.getStatusCode().value());
         return response(status, exception.getReason() == null ? status.getReasonPhrase() : exception.getReason(),
                 request, List.of());
+    }
+
+    /** Último recurso: nunca se filtran trazas ni mensajes internos; solo se registra la excepción. */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request)
+            throws Exception {
+        if (exception instanceof AccessDeniedException || exception instanceof AuthenticationException) {
+            throw exception;
+        }
+        if (exception instanceof ErrorResponse errorResponse) {
+            HttpStatus status = HttpStatus.valueOf(errorResponse.getStatusCode().value());
+            return response(status, status.getReasonPhrase(), request, List.of());
+        }
+        log.error("Error inesperado en {} {}", request.getMethod(), request.getRequestURI(), exception);
+        return response(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Ocurrió un error inesperado. Intentá nuevamente más tarde.", request, List.of());
     }
 
     private static ApiError.FieldViolation fieldViolation(FieldError error) {

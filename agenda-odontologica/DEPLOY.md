@@ -37,6 +37,12 @@ El frontend y Spring Boot se despliegan juntos en un único servicio web; Neon p
 | `LOGIN_WINDOW_MINUTES` | Ventana del contador en minutos; predeterminado `15` |
 | `LOGIN_LOCK_MINUTES` | Minutos de bloqueo tras alcanzar el límite; predeterminado `15` |
 | `APPOINTMENT_DEFAULT_MINUTES` | Duración predeterminada en minutos de los turnos nuevos; predeterminado `15` |
+| `REGISTRATION_ENABLED` | `true` para permitir que cualquiera cree una cuenta; `false` cierra el registro (403). Predeterminado `true`. |
+| `MAX_USERS` | Tope total de cuentas, admin incluido; predeterminado `50`. Cuidá el almacenamiento limitado de Neon. |
+| `REGISTER_MAX_PER_IP_PER_HOUR` | Intentos de registro por IP y hora; predeterminado `5`. |
+| `MAX_PATIENTS_PER_USER` | Pacientes por cuenta; predeterminado `200`. |
+| `MAX_APPOINTMENTS_PER_USER` | Turnos por cuenta; predeterminado `2000`. |
+| `TRUSTED_PROXY_HOPS` | Proxies propios delante de la app; predeterminado `0`. Ver la nota sobre IP real más abajo. |
 | `PORT` | No lo fijes manualmente si Render proporciona la variable `PORT` al contenedor. |
 
 5. Reemplazá el ejemplo de URL en `CORS_ALLOWED_ORIGINS` por la dirección pública del servicio. No hace falta un sitio web separado.
@@ -44,6 +50,14 @@ El frontend y Spring Boot se despliegan juntos en un único servicio web; Neon p
 7. Verificá `/actuator/health`, abrí la URL HTTPS e iniciá sesión con las credenciales elegidas.
 
 El perfil `prod` deshabilita Swagger UI y `/v3/api-docs`. Las cookies de sesión y CSRF se marcan `Secure` y `SameSite=Lax`; la cookie de sesión también lleva `HttpOnly` y `XSRF-TOKEN` permanece legible por el frontend. El servicio debe atenderse por HTTPS. Se permiten cinco fallos de login por IP y usuario dentro de la ventana; el sexto queda bloqueado. El contador se mantiene en memoria, se reinicia al reiniciar la aplicación y no se comparte entre instancias. Los turnos nuevos duran `APPOINTMENT_DEFAULT_MINUTES` (15 minutos por defecto); al cambiar el inicio de un turno existente se conserva su duración almacenada.
+
+### Registro público, cupo y almacenamiento
+
+Con el servicio público, cualquiera puede crear una cuenta mientras `REGISTRATION_ENABLED=true` y no se alcance `MAX_USERS`. Cada cuenta puede cargar hasta `MAX_PATIENTS_PER_USER` pacientes y `MAX_APPOINTMENTS_PER_USER` turnos; con los valores predeterminados el peor caso son 50 × (200 + 2000) filas, que conviene contrastar con la cuota de Neon. Para cerrar el registro sin tocar el código, poné `REGISTRATION_ENABLED=false` y redesplegá; las cuentas existentes siguen funcionando. Para dar de baja cuentas, ver «Administrar cuentas con SQL» en el README.
+
+**IP real detrás de Render.** Con `TRUSTED_PROXY_HOPS=0` la aplicación usa la IP del socket, que detrás del proxy de Render suele ser la del proxy: todos los visitantes comparten el límite de registros por hora (y de intentos de login). No lo cambies sin verificar en los logs de Render cuántos proxies agregan entradas a `X-Forwarded-For`; un valor mayor que el real permite falsificar la IP.
+
+Al actualizar desde la versión de un solo administrador, la migración V4 asigna los pacientes y turnos existentes al usuario `ADMIN_USERNAME`; no hace falta ninguna acción manual.
 
 ### 3. Comprobar la persistencia
 
@@ -64,6 +78,12 @@ LOGIN_MAX_ATTEMPTS=5
 LOGIN_WINDOW_MINUTES=15
 LOGIN_LOCK_MINUTES=15
 APPOINTMENT_DEFAULT_MINUTES=15
+REGISTRATION_ENABLED=true
+MAX_USERS=50
+REGISTER_MAX_PER_IP_PER_HOUR=5
+MAX_PATIENTS_PER_USER=200
+MAX_APPOINTMENTS_PER_USER=2000
+TRUSTED_PROXY_HOPS=0
 PORT=inyectada-por-Render
 ```
 

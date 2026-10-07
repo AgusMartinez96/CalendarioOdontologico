@@ -221,6 +221,24 @@ class RegistrationApiTest {
                 .andExpect(jsonPath("$.registrationOpen").value(true));
     }
 
+    @Test
+    void sendsSecurityHeadersAndNeverLeaksInternalErrorDetails() throws Exception {
+        MvcResult result = mvc.perform(get("/api/auth/config")).andExpect(status().isOk()).andReturn();
+        var response = result.getResponse();
+        assertEquals("nosniff", response.getHeader("X-Content-Type-Options"));
+        assertEquals("DENY", response.getHeader("X-Frame-Options"));
+        assertEquals("strict-origin-when-cross-origin", response.getHeader("Referrer-Policy"));
+        String csp = response.getHeader("Content-Security-Policy");
+        assertNotNull(csp);
+        assertTrue(csp.contains("script-src 'self';") && csp.contains("frame-ancestors 'none'"));
+        assertFalse(csp.contains("script-src 'self' 'unsafe-inline'"));
+        assertEquals(null, response.getHeader("Strict-Transport-Security"), "HSTS solo en prod");
+
+        String body = mvc.perform(get("/api/v1/no-existe").session(api.login("test-admin", "test-password")))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+        assertFalse(body.contains("Exception") || body.contains("\tat ") || body.contains("trace"));
+    }
+
     private void assertPasswordRejected(String username, String password) throws Exception {
         api.send(HttpMethod.POST, REGISTER, credentials(username, password), null, nextIp())
                 .andExpect(status().isBadRequest())

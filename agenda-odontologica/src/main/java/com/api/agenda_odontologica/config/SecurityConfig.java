@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
@@ -29,6 +30,14 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+    /**
+     * FullCalendar inyecta estilos en línea, por eso style-src admite 'unsafe-inline'; los scripts, no.
+     * El perfil dev relaja script-src solo para que funcione Swagger UI.
+     */
+    static final String STRICT_CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self'; "
+            + "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; "
+            + "connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; "
+            + "frame-ancestors 'none'";
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -75,13 +84,29 @@ public class SecurityConfig {
             HttpSecurity http,
             AuthenticationEntryPoint apiAuthenticationEntryPoint,
             AccessDeniedHandler apiAccessDeniedHandler,
-            @Value("${server.servlet.session.cookie.secure:false}") boolean secureCookies) throws Exception {
+            @Value("${server.servlet.session.cookie.secure:false}") boolean secureCookies,
+            @Value("${app.security.hsts-enabled:false}") boolean hstsEnabled,
+            @Value("${app.security.content-security-policy:" + STRICT_CONTENT_SECURITY_POLICY + "}")
+            String contentSecurityPolicy) throws Exception {
         CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         tokenRepository.setCookieCustomizer(cookie -> cookie.secure(secureCookies).sameSite("Lax"));
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
 
         http
                 .cors(cors -> {})
+                .headers(headers -> {
+                    headers.contentTypeOptions(options -> {});
+                    headers.frameOptions(frame -> frame.deny());
+                    headers.referrerPolicy(referrer -> referrer.policy(
+                            ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
+                    headers.contentSecurityPolicy(csp -> csp.policyDirectives(contentSecurityPolicy));
+                    if (hstsEnabled) {
+                        headers.httpStrictTransportSecurity(hsts -> hsts
+                                .maxAgeInSeconds(31_536_000).includeSubDomains(true));
+                    } else {
+                        headers.httpStrictTransportSecurity(hsts -> hsts.disable());
+                    }
+                })
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(tokenRepository)
                         .csrfTokenRequestHandler(requestHandler))
