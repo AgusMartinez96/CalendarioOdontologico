@@ -6,7 +6,6 @@ import com.api.agenda_odontologica.api.repository.AppointmentRecordRepository;
 import com.api.agenda_odontologica.api.repository.PatientRecordRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -30,8 +29,13 @@ class PatientApiServiceTest {
     @Mock
     private AppointmentRecordRepository appointments;
 
-    @InjectMocks
+
     private PatientApiService service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        service = new PatientApiService(patients, appointments, 200);
+    }
 
     @Test
     void createsPatient() {

@@ -26,15 +26,21 @@ public class AppointmentApiService {
     private final PatientRecordRepository patients;
     private final Clock clock;
     private final Duration defaultDuration;
+    private final long maxAppointmentsPerUser;
 
     public AppointmentApiService(
             AppointmentRecordRepository appointments,
             PatientRecordRepository patients,
             Clock clock,
-            @Value("${app.appointments.default-minutes:15}") long defaultDurationMinutes) {
+            @Value("${app.appointments.default-minutes:15}") long defaultDurationMinutes,
+            @Value("${app.limits.max-appointments-per-user:2000}") long maxAppointmentsPerUser) {
         if (defaultDurationMinutes <= 0) {
             throw new IllegalArgumentException("La duración predeterminada de los turnos debe ser mayor que cero.");
         }
+        if (maxAppointmentsPerUser < 1) {
+            throw new IllegalArgumentException("MAX_APPOINTMENTS_PER_USER debe ser mayor que cero.");
+        }
+        this.maxAppointmentsPerUser = maxAppointmentsPerUser;
         this.appointments = appointments;
         this.patients = patients;
         this.clock = clock;
@@ -64,6 +70,10 @@ public class AppointmentApiService {
         requireOwner(ownerId);
         validateStart(request.startAt());
         PatientRecord patient = requirePatient(ownerId, request.patientId());
+        if (appointments.countByOwnerId(ownerId) >= maxAppointmentsPerUser) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "Llegaste al máximo de " + maxAppointmentsPerUser + " turnos por cuenta.");
+        }
         Instant endAt = request.startAt().plus(defaultDuration);
         ensureAvailable(ownerId, request.startAt(), endAt, request.estado(), null);
         AppointmentRecord appointment = new AppointmentRecord(ownerId);

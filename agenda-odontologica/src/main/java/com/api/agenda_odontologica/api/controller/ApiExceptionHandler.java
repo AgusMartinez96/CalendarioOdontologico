@@ -2,7 +2,8 @@ package com.api.agenda_odontologica.api.controller;
 
 import com.api.agenda_odontologica.api.dto.ApiError;
 import com.api.agenda_odontologica.api.service.ApiException;
-import com.api.agenda_odontologica.api.service.LoginRateLimitException;
+import com.api.agenda_odontologica.api.service.FieldValidationException;
+import com.api.agenda_odontologica.api.service.RateLimitException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -22,9 +23,15 @@ import java.util.List;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
-    @ExceptionHandler(LoginRateLimitException.class)
-    public ResponseEntity<ApiError> handleLoginRateLimit(
-            LoginRateLimitException exception, HttpServletRequest request) {
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<ApiError> handleFieldValidation(
+            FieldValidationException exception, HttpServletRequest request) {
+        return response(HttpStatus.BAD_REQUEST, exception.getMessage(), request, exception.getViolations());
+    }
+
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<ApiError> handleRateLimit(
+            RateLimitException exception, HttpServletRequest request) {
         HttpStatus status = HttpStatus.TOO_MANY_REQUESTS;
         ApiError error = new ApiError(Instant.now(), status.value(), status.getReasonPhrase(),
                 exception.getMessage(), request.getRequestURI(), List.of());

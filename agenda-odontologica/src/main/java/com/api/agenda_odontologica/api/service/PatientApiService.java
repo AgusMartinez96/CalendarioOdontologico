@@ -5,6 +5,7 @@ import com.api.agenda_odontologica.api.dto.PatientResponse;
 import com.api.agenda_odontologica.api.entity.PatientRecord;
 import com.api.agenda_odontologica.api.repository.AppointmentRecordRepository;
 import com.api.agenda_odontologica.api.repository.PatientRecordRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,18 @@ public class PatientApiService {
     private final PatientRecordRepository patients;
     private final AppointmentRecordRepository appointments;
 
-    public PatientApiService(PatientRecordRepository patients, AppointmentRecordRepository appointments) {
+    private final long maxPatientsPerUser;
+
+    public PatientApiService(
+            PatientRecordRepository patients,
+            AppointmentRecordRepository appointments,
+            @Value("${app.limits.max-patients-per-user:200}") long maxPatientsPerUser) {
+        if (maxPatientsPerUser < 1) {
+            throw new IllegalArgumentException("MAX_PATIENTS_PER_USER debe ser mayor que cero.");
+        }
         this.patients = patients;
         this.appointments = appointments;
+        this.maxPatientsPerUser = maxPatientsPerUser;
     }
 
     @Transactional(readOnly = true)
@@ -42,6 +52,10 @@ public class PatientApiService {
         String dni = request.dni().trim();
         if (patients.existsByOwnerIdAndDni(ownerId, dni)) {
             throw new ApiException(HttpStatus.CONFLICT, "Ya existe un paciente con ese DNI.");
+        }
+        if (patients.countByOwnerId(ownerId) >= maxPatientsPerUser) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "Llegaste al máximo de " + maxPatientsPerUser + " pacientes por cuenta.");
         }
         return save(new PatientRecord(ownerId, request.nombre().trim(), request.apellido().trim(),
                 dni, request.telefono().trim(), normalize(request.email())));

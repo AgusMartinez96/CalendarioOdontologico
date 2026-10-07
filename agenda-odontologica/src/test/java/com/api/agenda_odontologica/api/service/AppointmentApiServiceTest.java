@@ -43,7 +43,7 @@ class AppointmentApiServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AppointmentApiService(appointments, patients, Clock.fixed(NOW, ZoneOffset.UTC), 15);
+        service = new AppointmentApiService(appointments, patients, Clock.fixed(NOW, ZoneOffset.UTC), 15, 2000);
         patient = new PatientRecord(OWNER, "Ana", "Pérez", "1234", "111", null);
     }
 
@@ -67,7 +67,7 @@ class AppointmentApiServiceTest {
     @Test
     void createsAppointmentUsingConfiguredDefaultDuration() {
         service = new AppointmentApiService(
-                appointments, patients, Clock.fixed(NOW, ZoneOffset.UTC), 45);
+                appointments, patients, Clock.fixed(NOW, ZoneOffset.UTC), 45, 2000);
         when(patients.findByIdAndOwnerId(1L, OWNER)).thenReturn(Optional.of(patient));
         when(appointments.hasOverlap(eq(OWNER), any(), any(), eq(AppointmentStatus.CANCELADO)))
                 .thenReturn(false);
