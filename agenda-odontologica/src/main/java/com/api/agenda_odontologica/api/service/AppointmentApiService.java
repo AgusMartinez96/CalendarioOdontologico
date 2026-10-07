@@ -16,7 +16,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
+/** El ownerId siempre proviene del usuario autenticado y se aplica a cada operación. */
 @Service
 @Transactional
 public class AppointmentApiService {
@@ -41,45 +43,47 @@ public class AppointmentApiService {
 
     @Transactional(readOnly = true)
     public List<AppointmentResponse> list(
-            Instant from, Instant to, AppointmentStatus status, String patientSearch) {
+            Long ownerId, Instant from, Instant to, AppointmentStatus status, String patientSearch) {
+        requireOwner(ownerId);
         if (from == null || to == null || !to.isAfter(from)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "El rango de fechas es inválido.");
         }
         String search = patientSearch == null || patientSearch.isBlank() ? "" : patientSearch.trim();
         List<AppointmentRecord> results = status == null
-                ? appointments.findInRange(from, to, search)
-                : appointments.findInRangeByStatus(from, to, status, search);
+                ? appointments.findInRange(ownerId, from, to, search)
+                : appointments.findInRangeByStatus(ownerId, from, to, status, search);
         return results.stream().map(AppointmentResponse::new).toList();
     }
 
     @Transactional(readOnly = true)
-    public AppointmentResponse get(Long id) {
-        return new AppointmentResponse(requireAppointment(id));
+    public AppointmentResponse get(Long ownerId, Long id) {
+        return new AppointmentResponse(requireAppointment(ownerId, id));
     }
 
-    public AppointmentResponse create(AppointmentRequest request) {
+    public AppointmentResponse create(Long ownerId, AppointmentRequest request) {
+        requireOwner(ownerId);
         validateStart(request.startAt());
-        PatientRecord patient = requirePatient(request.patientId());
+        PatientRecord patient = requirePatient(ownerId, request.patientId());
         Instant endAt = request.startAt().plus(defaultDuration);
-        ensureAvailable(request.startAt(), endAt, request.estado(), null);
-        AppointmentRecord appointment = new AppointmentRecord();
+        ensureAvailable(ownerId, request.startAt(), endAt, request.estado(), null);
+        AppointmentRecord appointment = new AppointmentRecord(ownerId);
         apply(appointment, request, patient, endAt);
         return new AppointmentResponse(appointments.save(appointment));
     }
 
-    public AppointmentResponse update(Long id, AppointmentRequest request) {
-        AppointmentRecord appointment = requireAppointment(id);
+    public AppointmentResponse update(Long ownerId, Long id, AppointmentRequest request) {
+        AppointmentRecord appointment = requireAppointment(ownerId, id);
         validateStart(request.startAt());
-        PatientRecord patient = requirePatient(request.patientId());
+        PatientRecord patient = requirePatient(ownerId, request.patientId());
         Duration existingDuration = Duration.between(appointment.getStartAt(), appointment.getEndAt());
         Instant endAt = request.startAt().plus(existingDuration);
-        ensureAvailable(request.startAt(), endAt, request.estado(), id);
+        ensureAvailable(ownerId, request.startAt(), endAt, request.estado(), id);
         apply(appointment, request, patient, endAt);
         return new AppointmentResponse(appointments.save(appointment));
     }
 
-    public AppointmentResponse cancel(Long id) {
-        AppointmentRecord appointment = requireAppointment(id);
+    public AppointmentResponse cancel(Long ownerId, Long id) {
+        AppointmentRecord appointment = requireAppointment(ownerId, id);
         appointment.setEstado(AppointmentStatus.CANCELADO);
         return new AppointmentResponse(appointments.save(appointment));
     }
@@ -90,14 +94,15 @@ public class AppointmentApiService {
         }
     }
 
-    private void ensureAvailable(Instant startAt, Instant endAt, AppointmentStatus requestedStatus, Long excludeId) {
+    private void ensureAvailable(
+            Long ownerId, Instant startAt, Instant endAt, AppointmentStatus requestedStatus, Long excludeId) {
         AppointmentStatus status = requestedStatus == null ? AppointmentStatus.PROGRAMADO : requestedStatus;
         if (status == AppointmentStatus.CANCELADO) {
             return;
         }
         boolean overlaps = excludeId == null
-                ? appointments.hasOverlap(startAt, endAt, AppointmentStatus.CANCELADO)
-                : appointments.hasOverlapExcluding(startAt, endAt, AppointmentStatus.CANCELADO, excludeId);
+                ? appointments.hasOverlap(ownerId, startAt, endAt, AppointmentStatus.CANCELADO)
+                : appointments.hasOverlapExcluding(ownerId, startAt, endAt, AppointmentStatus.CANCELADO, excludeId);
         if (overlaps) {
             throw new ApiException(HttpStatus.CONFLICT, "El horario se superpone con otro turno.");
         }
@@ -113,14 +118,20 @@ public class AppointmentApiService {
         appointment.setEstado(request.estado() == null ? AppointmentStatus.PROGRAMADO : request.estado());
     }
 
-    private AppointmentRecord requireAppointment(Long id) {
-        return appointments.findById(id)
+    private AppointmentRecord requireAppointment(Long ownerId, Long id) {
+        requireOwner(ownerId);
+        return appointments.findByIdAndOwnerId(id, ownerId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No se encontró el turno."));
     }
 
-    private PatientRecord requirePatient(Long id) {
-        return patients.findById(id)
+    private PatientRecord requirePatient(Long ownerId, Long id) {
+        requireOwner(ownerId);
+        return patients.findByIdAndOwnerId(id, ownerId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No se encontró el paciente."));
+    }
+
+    private static void requireOwner(Long ownerId) {
+        Objects.requireNonNull(ownerId, "ownerId");
     }
 
     private static String normalize(String value) {

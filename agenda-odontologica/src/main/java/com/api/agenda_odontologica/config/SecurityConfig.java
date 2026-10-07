@@ -12,11 +12,8 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -32,20 +29,6 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
-
-    @Bean
-    UserDetailsService userDetailsService(
-            PasswordEncoder passwordEncoder,
-            @Value("${app.admin.username}") String username,
-            @Value("${app.admin.password}") String password) {
-        if (password.isBlank()) {
-            throw new IllegalStateException("La variable ADMIN_PASSWORD debe configurarse.");
-        }
-        return new InMemoryUserDetailsManager(User.withUsername(username)
-                .password(passwordEncoder.encode(password))
-                .roles("ADMIN")
-                .build());
-    }
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -107,8 +90,9 @@ public class SecurityConfig {
                                 "/assets/**", "/favicon.ico", "/error", "/api/auth/csrf",
                                 "/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/**").hasRole("ADMIN")
-                        .anyRequest().hasRole("ADMIN"))
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                        .hasAuthority("ROLE_ADMIN")
+                        .anyRequest().hasAnyAuthority("ROLE_USER", "ROLE_ADMIN"))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(apiAuthenticationEntryPoint)
                         .accessDeniedHandler(apiAccessDeniedHandler))

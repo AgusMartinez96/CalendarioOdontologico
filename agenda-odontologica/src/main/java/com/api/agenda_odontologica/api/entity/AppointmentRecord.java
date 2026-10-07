@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "appointments")
@@ -20,6 +21,9 @@ public class AppointmentRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "owner_id", nullable = false, updatable = false)
+    private Long ownerId;
 
     @Column(name = "start_at", nullable = false)
     private Instant startAt;
@@ -41,11 +45,19 @@ public class AppointmentRecord {
     @Column(nullable = false, length = 20)
     private AppointmentStatus estado;
 
-    public AppointmentRecord() {
+    protected AppointmentRecord() {
+    }
+
+    public AppointmentRecord(Long ownerId) {
+        this.ownerId = Objects.requireNonNull(ownerId, "ownerId");
     }
 
     public Long getId() {
         return id;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
     }
 
     public Instant getStartAt() {

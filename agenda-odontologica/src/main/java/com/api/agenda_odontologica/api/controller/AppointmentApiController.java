@@ -3,10 +3,12 @@ package com.api.agenda_odontologica.api.controller;
 import com.api.agenda_odontologica.api.dto.AppointmentRequest;
 import com.api.agenda_odontologica.api.dto.AppointmentResponse;
 import com.api.agenda_odontologica.api.entity.AppointmentStatus;
+import com.api.agenda_odontologica.api.security.AppUserDetails;
 import com.api.agenda_odontologica.api.service.AppointmentApiService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,32 +34,36 @@ public class AppointmentApiController {
 
     @GetMapping
     public List<AppointmentResponse> list(
+            @AuthenticationPrincipal AppUserDetails user,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required = false) AppointmentStatus status,
             @RequestParam(required = false) String patientSearch) {
-        return service.list(from, to, status, patientSearch);
+        return service.list(user.getId(), from, to, status, patientSearch);
     }
 
     @GetMapping("/{id}")
-    public AppointmentResponse get(@PathVariable Long id) {
-        return service.get(id);
+    public AppointmentResponse get(@AuthenticationPrincipal AppUserDetails user, @PathVariable Long id) {
+        return service.get(user.getId(), id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public AppointmentResponse create(@Valid @RequestBody AppointmentRequest request) {
-        return service.create(request);
+    public AppointmentResponse create(
+            @AuthenticationPrincipal AppUserDetails user, @Valid @RequestBody AppointmentRequest request) {
+        return service.create(user.getId(), request);
     }
 
     @PutMapping("/{id}")
     public AppointmentResponse update(
-            @PathVariable Long id, @Valid @RequestBody AppointmentRequest request) {
-        return service.update(id, request);
+            @AuthenticationPrincipal AppUserDetails user,
+            @PathVariable Long id,
+            @Valid @RequestBody AppointmentRequest request) {
+        return service.update(user.getId(), id, request);
     }
 
     @PatchMapping("/{id}/cancel")
-    public AppointmentResponse cancel(@PathVariable Long id) {
-        return service.cancel(id);
+    public AppointmentResponse cancel(@AuthenticationPrincipal AppUserDetails user, @PathVariable Long id) {
+        return service.cancel(user.getId(), id);
     }
 }

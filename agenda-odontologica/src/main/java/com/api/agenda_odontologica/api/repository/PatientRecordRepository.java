@@ -6,20 +6,27 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
+/** Todas las consultas exigen ownerId (nunca null): un paciente ajeno no existe para el llamador. */
 public interface PatientRecordRepository extends JpaRepository<PatientRecord, Long> {
-    boolean existsByDni(String dni);
+    Optional<PatientRecord> findByIdAndOwnerId(Long id, Long ownerId);
 
-    boolean existsByDniAndIdNot(String dni, Long id);
+    boolean existsByOwnerIdAndDni(Long ownerId, String dni);
+
+    boolean existsByOwnerIdAndDniAndIdNot(Long ownerId, String dni, Long id);
+
+    long countByOwnerId(Long ownerId);
 
     @Query("""
             select p from PatientRecord p
-            where :search = ''
+            where p.ownerId = :ownerId
+              and (:search = ''
                or lower(p.nombre) like lower(concat('%', :search, '%'))
                or lower(p.apellido) like lower(concat('%', :search, '%'))
                or lower(p.dni) like lower(concat('%', :search, '%'))
-               or lower(p.telefono) like lower(concat('%', :search, '%'))
+               or lower(p.telefono) like lower(concat('%', :search, '%')))
             order by p.apellido, p.nombre
             """)
-    List<PatientRecord> search(@Param("search") String search);
+    List<PatientRecord> search(@Param("ownerId") Long ownerId, @Param("search") String search);
 }

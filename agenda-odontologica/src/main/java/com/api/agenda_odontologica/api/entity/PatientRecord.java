@@ -6,13 +6,20 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
+import java.util.Objects;
 
 @Entity
-@Table(name = "patients")
+@Table(name = "patients", uniqueConstraints =
+        @UniqueConstraint(name = "uk_patients_owner_dni", columnNames = {"owner_id", "dni"}))
 public class PatientRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "owner_id", nullable = false, updatable = false)
+    private Long ownerId;
 
     @Column(nullable = false, length = 100)
     private String nombre;
@@ -20,7 +27,7 @@ public class PatientRecord {
     @Column(nullable = false, length = 100)
     private String apellido;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     private String dni;
 
     @Column(nullable = false, length = 40)
@@ -32,7 +39,9 @@ public class PatientRecord {
     protected PatientRecord() {
     }
 
-    public PatientRecord(String nombre, String apellido, String dni, String telefono, String email) {
+    public PatientRecord(
+            Long ownerId, String nombre, String apellido, String dni, String telefono, String email) {
+        this.ownerId = Objects.requireNonNull(ownerId, "ownerId");
         this.nombre = nombre;
         this.apellido = apellido;
         this.dni = dni;
@@ -42,6 +51,10 @@ public class PatientRecord {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
     }
 
     public String getNombre() {

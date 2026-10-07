@@ -22,6 +22,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PatientApiServiceTest {
+    private static final Long OWNER = 7L;
+
     @Mock
     private PatientRecordRepository patients;
 
@@ -34,10 +36,10 @@ class PatientApiServiceTest {
     @Test
     void createsPatient() {
         PatientRequest request = new PatientRequest(" Ana ", " Pérez ", "1234", " 111 ", null);
-        when(patients.existsByDni("1234")).thenReturn(false);
-        when(patients.save(any(PatientRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(patients.existsByOwnerIdAndDni(OWNER, "1234")).thenReturn(false);
+        when(patients.saveAndFlush(any(PatientRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = service.create(request);
+        var response = service.create(OWNER, request);
 
         assertEquals("Ana", response.nombre());
         assertEquals("Pérez", response.apellido());
@@ -46,20 +48,20 @@ class PatientApiServiceTest {
 
     @Test
     void rejectsDuplicateDni() {
-        when(patients.existsByDni("1234")).thenReturn(true);
+        when(patients.existsByOwnerIdAndDni(OWNER, "1234")).thenReturn(true);
 
         ApiException exception = assertThrows(ApiException.class,
-                () -> service.create(new PatientRequest("Ana", "Pérez", "1234", "111", null)));
+                () -> service.create(OWNER, new PatientRequest("Ana", "Pérez", "1234", "111", null)));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatus());
-        verify(patients, never()).save(any());
+        verify(patients, never()).saveAndFlush(any());
     }
 
     @Test
     void returnsNotFoundWhenPatientDoesNotExist() {
-        when(patients.findById(44L)).thenReturn(Optional.empty());
+        when(patients.findByIdAndOwnerId(44L, OWNER)).thenReturn(Optional.empty());
 
-        ApiException exception = assertThrows(ApiException.class, () -> service.get(44L));
+        ApiException exception = assertThrows(ApiException.class, () -> service.get(OWNER, 44L));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
     }
