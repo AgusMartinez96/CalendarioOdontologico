@@ -28,18 +28,47 @@ export type AppointmentInput = {
   estado: AppointmentStatus
 }
 
-type ApiError = { message?: string; fieldErrors?: { field: string; message: string }[] }
+export type FieldError = { field: string; message: string }
+type ApiError = { message?: string; fieldErrors?: FieldError[] }
+
+/** Error de la API con el código HTTP, la espera sugerida (429) y los errores por campo. */
+export class ApiRequestError extends Error {
+  readonly status: number
+  readonly retryAfterSeconds: number | null
+  readonly fieldErrors: FieldError[]
+
+  constructor(message: string, status: number, retryAfterSeconds: number | null = null, fieldErrors: FieldError[] = []) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.status = status
+    this.retryAfterSeconds = retryAfterSeconds
+    this.fieldErrors = fieldErrors
+  }
+}
 
 let csrfHeader = 'X-XSRF-TOKEN'
+let onUnauthorized: (() => void) | null = null
+
+/** Permite a la app volver a la pantalla de acceso cuando la sesión vence. */
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler
+}
 
 function csrfCookie(): string {
   const cookie = document.cookie.split('; ').find((part) => part.startsWith('XSRF-TOKEN='))
   return cookie ? decodeURIComponent(cookie.substring('XSRF-TOKEN='.length)) : ''
 }
 
+const NETWORK_ERROR = 'No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.'
+
 async function ensureCsrf(): Promise<void> {
-  const response = await fetch('/api/auth/csrf', { credentials: 'same-origin' })
-  if (!response.ok) throw new Error('No se pudo preparar una solicitud segura.')
+  let response: Response
+  try {
+    response = await fetch('/api/auth/csrf', { credentials: 'same-origin' })
+  } catch {
+    throw new ApiRequestError(NETWORK_ERROR, 0)
+  }
+  if (!response.ok) throw new ApiRequestError('No se pudo preparar una solicitud segura.', response.status)
   const token = (await response.json()) as { token: string; headerName: string }
   csrfHeader = token.headerName
 }
@@ -52,30 +81,65 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set(csrfHeader, csrfCookie())
   }
 
-  const response = await fetch(path, { ...init, headers, credentials: 'same-origin' })
+  let response: Response
+  try {
+    response = await fetch(path, { ...init, headers, credentials: 'same-origin' })
+  } catch {
+    throw new ApiRequestError(NETWORK_ERROR, 0)
+  }
   if (response.status === 204) return undefined as T
   let body: ApiError & T
   try {
     body = (await response.json()) as ApiError & T
   } catch {
-    throw new Error(response.ok
+    throw new ApiRequestError(response.ok
       ? 'El servidor devolvió una respuesta inválida.'
-      : `El servidor respondió con un error (${response.status}).`)
+      : `El servidor respondió con un error (${response.status}).`, response.status)
   }
   if (!response.ok) {
-    const details = body.fieldErrors?.map((error) => `${error.field}: ${error.message}`).join(' ')
-    throw new Error([body.message, details].filter(Boolean).join(' '))
+    if (response.status === 401 && !path.startsWith('/api/auth/')) {
+      onUnauthorized?.()
+      throw new ApiRequestError('Tu sesión venció. Volvé a iniciar sesión.', 401)
+    }
+    const retryAfter = Number.parseInt(response.headers.get('Retry-After') ?? '', 10)
+    const fieldErrors = body.fieldErrors ?? []
+    const details = fieldErrors.map((error) => `${error.field}: ${error.message}`).join(' ')
+    throw new ApiRequestError(
+      [body.message, details].filter(Boolean).join(' '),
+      response.status,
+      Number.isFinite(retryAfter) ? retryAfter : null,
+      fieldErrors,
+    )
   }
   return body
 }
 
-export async function getSession(): Promise<{ authenticated: boolean; username: string }> {
+type SessionResponse = { authenticated: boolean; username: string }
+
+export async function getSession(): Promise<SessionResponse> {
   return request('/api/auth/session')
 }
 
-export async function login(username: string, password: string): Promise<void> {
+export async function getAuthConfig(): Promise<{ registrationOpen: boolean }> {
+  return request('/api/auth/config')
+}
+
+export async function login(username: string, password: string): Promise<string> {
   await ensureCsrf()
-  await request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) })
+  const session = await request<SessionResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+  return session.username
+}
+
+export async function register(username: string, password: string): Promise<string> {
+  await ensureCsrf()
+  const session = await request<SessionResponse>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+  return session.username
 }
 
 export async function logout(): Promise<void> {

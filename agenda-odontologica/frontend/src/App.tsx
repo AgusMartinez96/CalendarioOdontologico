@@ -7,11 +7,12 @@ import luxonPlugin from '@fullcalendar/luxon3'
 import esLocale from '@fullcalendar/core/locales/es'
 import type { DateSelectArg, EventClickArg, EventInput, DatesSetArg } from '@fullcalendar/core'
 import { DateTime } from 'luxon'
+import AuthScreen from './AuthScreen'
 import {
   api,
   getSession,
-  login,
   logout,
+  setUnauthorizedHandler,
   type Appointment,
   type AppointmentInput,
   type AppointmentStatus,
@@ -62,9 +63,7 @@ function displayTime(value: string): string {
 function App() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const [username, setUsername] = useState('')
-  const [loginName, setLoginName] = useState('')
-  const [password, setPassword] = useState('')
-  const [loginError, setLoginError] = useState('')
+  const [sessionNotice, setSessionNotice] = useState('')
   const [view, setView] = useState<'calendar' | 'patients'>('calendar')
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
@@ -78,6 +77,19 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setAuthenticated(false)
+      setUsername('')
+      setAppointments([])
+      setPatients([])
+      setAppointmentDraft(null)
+      setPatientDraft(null)
+      setSessionNotice('Tu sesión venció. Volvé a iniciar sesión.')
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [])
 
   useEffect(() => {
     getSession()
@@ -142,21 +154,13 @@ function App() {
     [appointmentDraft?.id, appointments],
   )
 
-  async function onLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setSaving(true)
-    setLoginError('')
-    try {
-      await login(loginName.trim(), password)
-      setUsername(loginName.trim())
-      setAuthenticated(true)
-      setPassword('')
-      setError('')
-    } catch (reason) {
-      setLoginError(reason instanceof Error ? reason.message : 'No se pudo iniciar sesión.')
-    } finally {
-      setSaving(false)
-    }
+  function onAuthenticated(name: string) {
+    setUsername(name)
+    setAuthenticated(true)
+    setSessionNotice('')
+    setError('')
+    setNotice('')
+    setView('calendar')
   }
 
   async function onLogout() {
@@ -167,6 +171,8 @@ function App() {
       setUsername('')
       setAppointments([])
       setPatients([])
+      setSessionNotice('')
+      setNotice('')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'No se pudo cerrar la sesión.')
     }
@@ -281,29 +287,8 @@ function App() {
   }
 
   if (!authenticated) {
-    return (
-      <main className="login-shell">
-        <form className="login-card" onSubmit={onLogin}>
-          <div className="brand-mark login-mark">✳</div>
-          <p className="eyebrow">CONSULTORIO ODONTOLÓGICO</p>
-          <h1>Agenda Dental</h1>
-          <p className="muted">Iniciá sesión para gestionar pacientes y turnos.</p>
-          {loginError && <div className="alert alert-error" role="alert">{loginError}</div>}
-          {error && <div className="alert alert-error" role="alert">{error}</div>}
-          <label>Usuario
-            <input autoComplete="username" required value={loginName}
-              onChange={(event) => setLoginName(event.target.value)} />
-          </label>
-          <label>Contraseña
-            <input autoComplete="current-password" type="password" required value={password}
-              onChange={(event) => setPassword(event.target.value)} />
-          </label>
-          <button className="primary-button full-width" type="submit" disabled={saving}>
-            {saving ? 'Ingresando…' : 'Iniciar sesión'}
-          </button>
-        </form>
-      </main>
-    )
+    return <AuthScreen onAuthenticated={onAuthenticated} notice={sessionNotice || error} />
+
   }
 
   return (
@@ -322,7 +307,7 @@ function App() {
         </div>
         <div className="account">
           <div className="avatar">{username.slice(0, 1).toUpperCase()}</div>
-          <div className="account-name"><strong>{username}</strong><span>Administrador</span></div>
+          <div className="account-name"><strong>{username}</strong><span>Sesión iniciada</span></div>
           <button className="icon-button logout-button" onClick={() => void onLogout()} title="Cerrar sesión" aria-label="Cerrar sesión">↪</button>
         </div>
       </aside>
@@ -349,6 +334,17 @@ function App() {
 
         {view === 'calendar' ? (
           <section className="calendar-card" aria-label="Calendario de turnos">
+            {patients.length === 0 && !patientSearch && (
+              <div className="welcome-banner">
+                <div>
+                  <strong>Todavía no cargaste pacientes</strong>
+                  <p>Empezá agregando tu primer paciente; después vas a poder agendarle turnos desde el calendario.</p>
+                </div>
+                <button className="primary-button" onClick={() => { setView('patients'); openNewPatient() }}>
+                  ＋ Agregar paciente
+                </button>
+              </div>
+            )}
             <div className="calendar-tools">
               <label className="search-field"><span>⌕</span>
                 <input aria-label="Buscar paciente" placeholder="Buscar paciente…" value={patientSearch}
@@ -413,9 +409,12 @@ function App() {
               </label>
             </div>
             {patients.length === 0 ? <div className="empty-state">
-              <div className="empty-icon">♧</div><h2>No hay pacientes todavía</h2>
-              <p>Agregá una persona para poder agendar su primer turno.</p>
-              <button className="primary-button" onClick={openNewPatient}>＋ Nuevo paciente</button>
+              <div className="empty-icon">♧</div>
+              <h2>{patientSearch ? 'No se encontraron pacientes' : 'Todavía no cargaste pacientes'}</h2>
+              <p>{patientSearch
+                ? 'Probá con otro nombre o DNI.'
+                : 'Agregá a tu primer paciente para poder agendarle turnos.'}</p>
+              {!patientSearch && <button className="primary-button" onClick={openNewPatient}>＋ Nuevo paciente</button>}
             </div> : (
               <>
                 <div className="patients-table-wrap">

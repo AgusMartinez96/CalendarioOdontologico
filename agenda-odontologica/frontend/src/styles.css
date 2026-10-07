@@ -141,6 +141,30 @@ textarea { resize: vertical; }
 .login-card, .loading-card { display: grid; width: min(410px, 100%); gap: 16px; padding: 35px; border: 1px solid #e9ecf2; border-radius: 16px; background: #fff; box-shadow: 0 15px 55px #2636540c; }
 .login-mark { width: 43px; height: 43px; }.login-card .eyebrow { margin: 3px 0 -10px; }.login-card h1 { margin: 0; color: #26334a; font-size: 1.8rem; letter-spacing: -.04em; }.login-card .muted { margin: -11px 0 3px; line-height: 1.6; }
 .loading-card { display: block; color: #748096; text-align: center; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 11px; background: #f0f2f7; }
+.auth-tab { min-height: 38px; border: 0; border-radius: 8px; color: #5d6a80; background: transparent; font-size: .86rem; font-weight: 650; }
+.auth-tab.selected { color: #3e53c4; background: #fff; box-shadow: 0 1px 4px #24334b1f; }
+.auth-tab:focus-visible, .password-toggle:focus-visible { outline: 3px solid #17233c; outline-offset: 2px; }
+.auth-messages:empty { display: none; }
+.auth-messages { display: grid; gap: 8px; }
+.auth-form { display: grid; gap: 16px; }
+.field { display: grid; gap: 7px; }
+.field > label { color: #4e5b70; font-size: .88rem; font-weight: 600; }
+.password-field { position: relative; }
+.password-field input { padding-right: 84px; }
+.password-toggle { position: absolute; top: 50%; right: 6px; min-height: 30px; padding: 0 10px; transform: translateY(-50%); border: 0; border-radius: 7px; color: #4a5fcf; background: #eef0ff; font-size: .78rem; font-weight: 650; }
+.password-toggle:hover { background: #e2e6ff; }
+.field-help { margin: 0; color: #6c778a; font-size: .78rem; line-height: 1.5; }
+.field-error { margin: 0; color: #9b3a42; font-size: .8rem; font-weight: 600; line-height: 1.45; }
+input[aria-invalid="true"] { border-color: #c4575f; }
+.password-rules { display: grid; gap: 4px; margin: -4px 0 0; padding: 0; list-style: none; color: #6c778a; font-size: .78rem; }
+.password-rules li { display: flex; gap: 7px; line-height: 1.45; }
+.password-rules li > span:first-child { width: 14px; flex: none; text-align: center; }
+.password-rules li.met { color: #25704f; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.welcome-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #e0e5f8; background: #f3f5ff; }
+.welcome-banner strong { color: #2c3a8c; }
+.welcome-banner p { margin: 4px 0 0; color: #5d6a80; font-size: .84rem; line-height: 1.5; }
 
 @media (min-width: 1600px) { .main-area { padding-right: 48px; padding-left: 48px; } }
 @media (max-width: 900px) {
@@ -151,7 +175,8 @@ textarea { resize: vertical; }
   .sidebar { position: sticky; inset: 0 0 auto; width: 100%; height: auto; flex-direction: row; align-items: center; gap: 9px; padding: 9px 12px; border-right: 0; border-bottom: 1px solid #e8ebf1; }
   .brand { gap: 7px; padding: 0; font-size: .9rem; }.brand-mark { width: 31px; height: 31px; font-size: 1.3rem; }
   .nav-caption, .sidebar-note { display: none; }.nav-link { width: auto; gap: 5px; padding: 8px 9px; font-size: .78rem; }.nav-link span { width: auto; }
-  .account { gap: 0; margin-left: auto; padding: 0; border: 0; }.account .avatar { width: 29px; height: 29px; font-size: .8rem; }.account-name { display: none; }.logout-button { width: 32px; }
+  .account { gap: 7px; margin-left: auto; padding: 0; border: 0; }.account .avatar { width: 29px; height: 29px; font-size: .8rem; }.account-name { flex: none; max-width: 84px; }.account-name span { display: none; }.account-name strong { white-space: nowrap; }.logout-button { width: 32px; }
+  .welcome-banner { align-items: stretch; flex-direction: column; padding: 14px; }.login-card .password-field input { padding-right: 78px; }
   .main-area { min-height: calc(100vh - 51px); margin: 0; padding: 20px 12px 32px; }
   .topbar { align-items: center; margin-bottom: 18px; }.topbar h1 { font-size: 1.33rem; }.topbar .primary-button { min-height: 37px; padding: 0 10px; font-size: .77rem; }
   .calendar-tools { flex-wrap: wrap; gap: 9px; padding: 11px; }.calendar-tools .search-field { width: 100%; }.filter-select { justify-content: space-between; width: 100%; }.filter-select select { flex: 1; }
